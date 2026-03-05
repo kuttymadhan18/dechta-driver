@@ -2,6 +2,7 @@
 const { sendOtpHandler, verifyOtpHandler, refreshTokenHandler } = require('../controllers/authController');
 
 async function authRoutes(fastify, options) {
+
   // POST /api/auth/send-otp
   fastify.post('/send-otp', {
     schema: {
@@ -9,11 +10,27 @@ async function authRoutes(fastify, options) {
         type: 'object',
         required: ['mobile'],
         properties: {
-          mobile: { type: 'string', minLength: 10, maxLength: 10 },
+          // STEP 3 — Backend: enforce 10 digits, starting with 6-9 (Indian mobile)
+          mobile: {
+            type: 'string',
+            minLength: 10,
+            maxLength: 10,
+            pattern: '^[6-9][0-9]{9}$',
+          },
         },
       },
     },
-    handler: sendOtpHandler,
+    // Custom error message for pattern failure
+    attachValidation: true,
+    handler: async (request, reply) => {
+      if (request.validationError) {
+        return reply.code(400).send({
+          success: false,
+          message: 'Invalid mobile number. Must be a 10-digit Indian number starting with 6, 7, 8, or 9.',
+        });
+      }
+      return sendOtpHandler(request, reply);
+    },
   });
 
   // POST /api/auth/verify-otp
@@ -23,12 +40,32 @@ async function authRoutes(fastify, options) {
         type: 'object',
         required: ['mobile', 'otp'],
         properties: {
-          mobile: { type: 'string', minLength: 10, maxLength: 10 },
-          otp: { type: 'string', minLength: 4, maxLength: 4 },
+          mobile: {
+            type: 'string',
+            minLength: 10,
+            maxLength: 10,
+            pattern: '^[6-9][0-9]{9}$',
+          },
+          // STEP 3 — OTP must be exactly 4 digits
+          otp: {
+            type: 'string',
+            minLength: 4,
+            maxLength: 4,
+            pattern: '^[0-9]{4}$',
+          },
         },
       },
     },
-    handler: verifyOtpHandler,
+    attachValidation: true,
+    handler: async (request, reply) => {
+      if (request.validationError) {
+        return reply.code(400).send({
+          success: false,
+          message: 'Invalid input. Mobile must be 10 digits and OTP must be 4 digits.',
+        });
+      }
+      return verifyOtpHandler(request, reply);
+    },
   });
 
   // POST /api/auth/refresh — requires valid token

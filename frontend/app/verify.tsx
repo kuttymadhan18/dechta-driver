@@ -26,6 +26,7 @@ export default function VerifyScreen() {
   const [loading, setLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
+  // STEP 2 — Log OTP to console for debugging
   useEffect(() => {
     if (devOtp) {
       console.log(`🔑 [DEV] OTP for ${mobile}: ${devOtp}`);
@@ -41,10 +42,8 @@ export default function VerifyScreen() {
 
       if (result.success) {
         if (result.isNewDriver) {
-          // New driver — go to registration
           router.replace('/register');
         } else {
-          // Existing driver — go to main app
           router.replace('/(tabs)');
         }
       } else {
@@ -74,8 +73,21 @@ export default function VerifyScreen() {
 
         <Text style={[styles.title, themeStyles.text]}>Verify Details</Text>
         <Text style={[styles.subtitle, themeStyles.subText]}>
-          We sent a 4-digit secure code to +91 {mobile}        </Text>
-        
+          We sent a 4-digit secure code to +91 {mobile}
+        </Text>
+
+        {/* ── STEP 2: DEMO OTP DISPLAY ─────────────────────────
+            Shows OTP on screen when OTP_PROVIDER=mock (demo mode).
+            Remove this block when going to production with real SMS.
+        ──────────────────────────────────────────────────────── */}
+        {devOtp ? (
+          <View style={styles.devOtpBox}>
+            <Text style={styles.devOtpLabel}>🔑 Demo OTP</Text>
+            <Text style={styles.devOtpValue}>{devOtp}</Text>
+          </View>
+        ) : null}
+        {/* ── END DEMO OTP DISPLAY ─────────────────────────── */}
+
         <View style={styles.formSpace}>
           
           <View style={[
@@ -90,7 +102,8 @@ export default function VerifyScreen() {
               keyboardType="number-pad"
               maxLength={4}
               value={otp}
-              onChangeText={setOtp}
+              // STEP 3 — Frontend: only allow digits, max 4
+              onChangeText={(text) => setOtp(text.replace(/[^0-9]/g, '').slice(0, 4))}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               editable={!loading}
@@ -124,8 +137,34 @@ const styles = StyleSheet.create({
   backButton: { position: 'absolute', top: 20, left: 24, padding: 10, zIndex: 10 },
   backText: { fontSize: 16, fontWeight: 'bold' },
   title: { fontSize: 30, fontWeight: 'bold', marginBottom: 8, marginTop: 40 },
-  subtitle: { fontSize: 16, marginBottom: 32, lineHeight: 24 },
+  subtitle: { fontSize: 16, marginBottom: 16, lineHeight: 24 },
   formSpace: { gap: 16 },
+
+  // STEP 2 — Demo OTP box styles (minimal, non-intrusive)
+  devOtpBox: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  devOtpLabel: {
+    fontSize: 13,
+    color: '#92400e',
+    fontWeight: '600',
+  },
+  devOtpValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#b45309',
+    letterSpacing: 6,
+  },
+
   inputWrapper: {
     paddingHorizontal: 16,
     height: 70, 

@@ -13,23 +13,19 @@ import {
   Animated,
   Alert
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Stack } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { AuthAPI } from '../services/api';
 
 export default function LoginScreen() {
   const router = useRouter();
-  <Stack.Screen options={{ headerShown: false }} />
-  
-  // Gets device theme (light or dark) to replicate your dark: classes
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   const [mobile, setMobile] = useState('');
+  const [mobileError, setMobileError] = useState(''); // STEP 3 — validation error state
   const [loading, setLoading] = useState(false);
-  const [isFocused, setIsFocused] = useState(false); // To replicate focus:border-brand-500
+  const [isFocused, setIsFocused] = useState(false);
   
-  // Replicating your "slide-up" CSS animation
   const slideAnim = useState(new Animated.Value(20))[0];
   const fadeAnim = useState(new Animated.Value(0))[0];
 
@@ -40,9 +36,30 @@ export default function LoginScreen() {
     ]).start();
   }, []);
 
+  // STEP 3 — Frontend: validate Indian mobile number
+  const handleMobileChange = (text: string) => {
+    // Only allow digits, max 10
+    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 10);
+    setMobile(cleaned);
+
+    if (cleaned.length > 0 && cleaned.length < 10) {
+      setMobileError('Mobile number must be 10 digits');
+    } else if (cleaned.length === 10 && !/^[6-9]\d{9}$/.test(cleaned)) {
+      setMobileError('Enter a valid Indian mobile number');
+    } else {
+      setMobileError('');
+    }
+  };
+
   const handleLogin = async () => {
-    if (mobile.length < 10) return;
+    // STEP 3 — Final validation before API call
+    if (mobile.length !== 10 || !/^[6-9]\d{9}$/.test(mobile)) {
+      setMobileError('Enter a valid 10-digit Indian mobile number');
+      return;
+    }
+    setMobileError('');
     setLoading(true);
+
     try {
       const result = await AuthAPI.sendOtp(mobile);
       if (result.success) {
@@ -61,54 +78,57 @@ export default function LoginScreen() {
   };
 
   const themeStyles = isDark ? darkTheme : lightTheme;
+  const isValidMobile = mobile.length === 10 && /^[6-9]\d{9}$/.test(mobile);
 
   return (
+    // BUG FIX — Stack.Screen moved inside return JSX
     <SafeAreaView style={[styles.container, themeStyles.container]}>
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.inner}
       >
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
           
-          {/* Matches: text-3xl font-bold dark:text-white mb-2 */}
           <Text style={[styles.title, themeStyles.text]}>Welcome Back</Text>
-          
-          {/* Matches: text-slate-500 dark:text-slate-400 mb-8 */}
           <Text style={[styles.subtitle, themeStyles.subText]}>
             Enter your mobile number to continue.
           </Text>
           
-          
-          {/* Matches your form logic */}
           <View style={styles.formSpace}>
             
-            {/* Matches: w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 ... focus:border-brand-500 */}
             <View style={[
               styles.inputWrapper, 
               themeStyles.inputWrapper,
-              isFocused ? styles.inputFocused : styles.inputUnfocused
+              isFocused ? styles.inputFocused : styles.inputUnfocused,
+              // STEP 3 — Red border if error
+              mobileError ? styles.inputError : null,
             ]}>
               <Text style={[styles.prefix, themeStyles.text]}>+91</Text>
               <TextInput
                 style={[styles.input, themeStyles.text]}
                 placeholder="Mobile Number"
-                placeholderTextColor={isDark ? '#94a3b8' : '#94a3b8'}
+                placeholderTextColor="#94a3b8"
                 keyboardType="phone-pad"
                 maxLength={10}
                 value={mobile}
-                onChangeText={setMobile}
+                onChangeText={handleMobileChange}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 editable={!loading}
               />
             </View>
 
-            {/* Matches: w-full py-4 rounded-2xl font-bold text-lg bg-brand-600 text-white shadow-lg */}
+            {/* STEP 3 — Show validation error message */}
+            {mobileError ? (
+              <Text style={styles.errorText}>{mobileError}</Text>
+            ) : null}
+
             <TouchableOpacity 
-              style={[styles.button, (mobile.length < 10 || loading) && styles.buttonDisabled]}
+              style={[styles.button, (!isValidMobile || loading) && styles.buttonDisabled]}
               onPress={handleLogin}
-              disabled={mobile.length < 10 || loading}
-              activeOpacity={0.8} // Replicates active:scale-95
+              disabled={!isValidMobile || loading}
+              activeOpacity={0.8}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
@@ -126,81 +146,65 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Base Layout
   container: { flex: 1 },
   inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  
-  // Typography
   title: { fontSize: 30, fontWeight: 'bold', marginBottom: 8 },
   subtitle: { fontSize: 16, marginBottom: 32 },
-  
-  // Form Spacing
-  formSpace: { gap: 16 }, // Matches space-y-4
-  
-  // Input UI (Matches your exact web CSS)
+  formSpace: { gap: 12 },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    height: 60, // Matches p-4
-    borderRadius: 16, // Matches rounded-2xl
+    height: 60,
+    borderRadius: 16,
     borderWidth: 2,
   },
-  inputFocused: {
-    borderColor: '#0284c7', // Matches focus:border-brand-500
+  inputFocused: { borderColor: '#0284c7' },
+  inputUnfocused: { borderColor: 'transparent' },
+  // STEP 3 — error border style
+  inputError: { borderColor: '#ef4444' },
+  // STEP 3 — error message style
+  errorText: {
+    color: '#ef4444',
+    fontSize: 13,
+    marginTop: -4,
+    paddingLeft: 4,
   },
-  inputUnfocused: {
-    borderColor: 'transparent', // Matches border-transparent
-  },
-  prefix: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
+  prefix: { fontSize: 18, fontWeight: 'bold', marginRight: 8 },
   input: {
     flex: 1,
-    fontSize: 18, // Matches text-lg
-    fontWeight: 'bold', // Matches font-bold
-    letterSpacing: 2, // Matches tracking-wider
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 2,
     height: '100%',
   },
-  
-  // Button UI (Matches your exact web CSS)
   button: {
     width: '100%',
-    paddingVertical: 16, // Matches py-4
-    borderRadius: 16, // Matches rounded-2xl
-    backgroundColor: '#0284c7', // Matches bg-brand-600
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#0284c7',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0284c7', // Matches shadow-lg
+    shadowColor: '#0284c7',
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     height: 60,
   },
-  buttonDisabled: {
-    opacity: 0.5, // Matches disabled:opacity-50
-  },
-  buttonText: {
-    color: '#ffffff', // Matches text-white
-    fontSize: 18, // Matches text-lg
-    fontWeight: 'bold', // Matches font-bold
-  },
+  buttonDisabled: { opacity: 0.5 },
+  buttonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
 });
 
-// Matches your Light Mode Web CSS
 const lightTheme = StyleSheet.create({
-  container: { backgroundColor: '#ffffff' }, // bg-white
-  text: { color: '#0f172a' }, // default text
-  subText: { color: '#64748b' }, // text-slate-500
-  inputWrapper: { backgroundColor: '#f8fafc' }, // bg-slate-50
+  container: { backgroundColor: '#ffffff' },
+  text: { color: '#0f172a' },
+  subText: { color: '#64748b' },
+  inputWrapper: { backgroundColor: '#f8fafc' },
 });
 
-// Matches your Dark Mode Web CSS
 const darkTheme = StyleSheet.create({
-  container: { backgroundColor: '#0f172a' }, // dark:bg-dark-bg
-  text: { color: '#ffffff' }, // dark:text-white
-  subText: { color: '#94a3b8' }, // dark:text-slate-400
-  inputWrapper: { backgroundColor: '#1e293b' }, // dark:bg-slate-800
+  container: { backgroundColor: '#0f172a' },
+  text: { color: '#ffffff' },
+  subText: { color: '#94a3b8' },
+  inputWrapper: { backgroundColor: '#1e293b' },
 });

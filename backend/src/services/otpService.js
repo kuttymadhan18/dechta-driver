@@ -10,7 +10,7 @@ function generateOtp() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Send OTP via MSG91 (production)
+// Send OTP via MSG91 (India SMS — current production option)
 // ──────────────────────────────────────────────────────────────
 async function sendViaMSG91(mobileNumber, otp) {
   const authKey = process.env.MSG91_AUTH_KEY;
@@ -31,12 +31,69 @@ async function sendViaMSG91(mobileNumber, otp) {
   return response.data;
 }
 
+// ══════════════════════════════════════════════════════════════
+// FUTURE TWILIO INTEGRATION START
+// ══════════════════════════════════════════════════════════════
+//
+// STEP 1 — Install Twilio package:
+//   npm install twilio
+//
+// STEP 2 — Add to your .env file:
+//   TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//   TWILIO_AUTH_TOKEN=your_auth_token_here
+//   TWILIO_PHONE_NUMBER=+1XXXXXXXXXX   (your Twilio number)
+//
+// STEP 3 — Add to Render environment variables (same keys above)
+//
+// STEP 4 — Uncomment and use this function:
+//
+// const twilio = require('twilio');
+//
+// async function sendViaTwilio(mobileNumber, otp) {
+//   const client = twilio(
+//     process.env.TWILIO_ACCOUNT_SID,
+//     process.env.TWILIO_AUTH_TOKEN
+//   );
+//   const message = await client.messages.create({
+//     body: `Your QC Logistics OTP is: ${otp}. Valid for 5 minutes.`,
+//     from: process.env.TWILIO_PHONE_NUMBER,
+//     to: `+91${mobileNumber}`,
+//   });
+//   return message.sid;
+// }
+//
+// STEP 5 — In sendOtp() below, add this case in the provider switch:
+//
+//   if (provider === 'twilio') {
+//     try {
+//       const sid = await sendViaTwilio(mobileNumber, otp);
+//       return { success: true, provider: 'twilio', messageSid: sid };
+//     } catch (err) {
+//       console.error('[Twilio Error]', err.message);
+//       throw new Error('Failed to send SMS via Twilio. Please try again.');
+//     }
+//   }
+//
+// STEP 6 — Update OTP_PROVIDER in .env:
+//   OTP_PROVIDER=twilio
+//
+// ══════════════════════════════════════════════════════════════
+// FUTURE TWILIO INTEGRATION END
+// ══════════════════════════════════════════════════════════════
+
 // ──────────────────────────────────────────────────────────────
-// Send OTP — switches between mock and MSG91 based on env
+// Send OTP — switches between mock / msg91 / twilio based on env
 // ──────────────────────────────────────────────────────────────
 async function sendOtp(mobileNumber) {
+  // STEP 3 — Backend validation: Indian mobile number format
+  if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
+    throw new Error('Invalid Indian mobile number. Must be 10 digits starting with 6-9.');
+  }
+
   const otp = generateOtp();
-  const expiresAt = new Date(Date.now() + parseInt(process.env.OTP_EXPIRY_MINUTES || '5') * 60 * 1000);
+  const expiresAt = new Date(
+    Date.now() + parseInt(process.env.OTP_EXPIRY_MINUTES || '5') * 60 * 1000
+  );
 
   // Store OTP in DB (upsert on mobile_number)
   const { error: dbError } = await supabaseAdmin
@@ -55,7 +112,7 @@ async function sendOtp(mobileNumber) {
     );
 
   if (dbError) {
-    // Table might not have unique on mobile_number — do insert instead
+    // Fallback: upsert failed (no unique constraint) — insert fresh record
     await supabaseAdmin.from('otp_verification').insert({
       mobile_number: mobileNumber,
       phone: mobileNumber,
@@ -68,12 +125,16 @@ async function sendOtp(mobileNumber) {
 
   const provider = process.env.OTP_PROVIDER || 'mock';
 
+  // ── MOCK MODE (Demo / Development) ────────────────────────
   if (provider === 'mock') {
-    // DEMO MODE: log OTP to console — replace with MSG91 in production
-    console.log(`\n📱 [MOCK OTP] Mobile: ${mobileNumber} | OTP: ${otp} | Expires: ${expiresAt.toLocaleString()}\n`);
+    console.log(
+      `\n📱 [MOCK OTP] Mobile: ${mobileNumber} | OTP: ${otp} | Expires: ${expiresAt.toLocaleString()}\n`
+    );
+    // otp_for_testing is returned so frontend can display it on screen in demo mode
     return { success: true, provider: 'mock', otp_for_testing: otp };
   }
 
+  // ── MSG91 (India SMS) ──────────────────────────────────────
   if (provider === 'msg91') {
     try {
       const result = await sendViaMSG91(mobileNumber, otp);
@@ -84,13 +145,24 @@ async function sendOtp(mobileNumber) {
     }
   }
 
-  throw new Error(`Unknown OTP_PROVIDER: ${provider}`);
+  // ── TWILIO (uncomment block above and add case here when ready) ──
+  // if (provider === 'twilio') { ... }
+
+  throw new Error(`Unknown OTP_PROVIDER: "${provider}". Valid options: mock, msg91`);
 }
 
 // ──────────────────────────────────────────────────────────────
 // Verify OTP
 // ──────────────────────────────────────────────────────────────
 async function verifyOtp(mobileNumber, enteredOtp) {
+  // Backend validation
+  if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
+    return { success: false, message: 'Invalid mobile number format.' };
+  }
+  if (!/^\d{4}$/.test(enteredOtp)) {
+    return { success: false, message: 'OTP must be 4 digits.' };
+  }
+
   const { data: records, error } = await supabaseAdmin
     .from('otp_verification')
     .select('*')
@@ -115,13 +187,13 @@ async function verifyOtp(mobileNumber, enteredOtp) {
     return { success: false, message: 'Too many attempts. Please request a new OTP.' };
   }
 
-  // Increment attempts
+  // Increment attempts first
   await supabaseAdmin
     .from('otp_verification')
     .update({ attempts: record.attempts + 1 })
     .eq('id', record.id);
 
-  // Verify OTP
+  // Verify OTP value
   if (record.otp !== enteredOtp) {
     return { success: false, message: 'Incorrect OTP. Please try again.' };
   }
