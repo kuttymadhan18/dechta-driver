@@ -1,0 +1,591 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView,
+  Dimensions, ActivityIndicator, Modal, Platform
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+type Timeframe = 'daily' | 'weekly' | 'monthly' | 'custom';
+
+interface Trip {
+  id: string;
+  type: string;
+  amount: number;
+  date: string;
+}
+
+interface CustomRange {
+  startDate: string | null;
+  endDate: string | null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DUMMY DATA GENERATOR
+// ═══════════════════════════════════════════════════════════════════════════
+const generateMockTrips = (timeframe: Timeframe, customRange?: CustomRange): Trip[] => {
+  if (timeframe === 'daily') {
+    return [
+      { id: '1', type: 'Package Delivery', amount: 150, date: 'Today, 02:30 PM' },
+      { id: '2', type: 'Food Delivery', amount: 80, date: 'Today, 01:15 PM' },
+      { id: '3', type: 'Document Courier', amount: 120, date: 'Today, 11:45 AM' },
+      { id: '4', type: 'Grocery Run', amount: 200, date: 'Today, 09:30 AM' },
+    ];
+  } else if (timeframe === 'weekly') {
+    return [
+      { id: '1', type: 'Bulk Delivery', amount: 450, date: 'Mon, Oct 19' },
+      { id: '2', type: 'Food Delivery', amount: 320, date: 'Tue, Oct 20' },
+      { id: '3', type: 'Package Delivery', amount: 550, date: 'Wed, Oct 21' },
+      { id: '4', type: 'Express Courier', amount: 280, date: 'Thu, Oct 22' },
+      { id: '5', type: 'Grocery Run', amount: 300, date: 'Fri, Oct 23' },
+    ];
+  } else if (timeframe === 'monthly') {
+    return [
+      { id: '1', type: 'Week 1 Earnings', amount: 2500, date: 'Oct 1 - Oct 7' },
+      { id: '2', type: 'Week 2 Earnings', amount: 3100, date: 'Oct 8 - Oct 14' },
+      { id: '3', type: 'Week 3 Earnings', amount: 2800, date: 'Oct 15 - Oct 21' },
+      { id: '4', type: 'Week 4 Earnings', amount: 1900, date: 'Oct 22 - Oct 28' },
+    ];
+  } else {
+    // custom
+    return [
+      { id: '1', type: 'Package Delivery', amount: 650, date: customRange?.startDate ?? '' },
+      { id: '2', type: 'Food Delivery', amount: 420, date: customRange?.startDate ?? '' },
+      { id: '3', type: 'Express Courier', amount: 310, date: customRange?.endDate ?? '' },
+    ];
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MINI CALENDAR
+// ═══════════════════════════════════════════════════════════════════════════
+const MONTHS = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+];
+const DAYS = ['S','M','T','W','T','F','S'];
+
+function MiniCalendar({
+  selectedDate,
+  onSelect,
+  highlightStart,
+  highlightEnd,
+}: {
+  selectedDate: string | null;
+  onSelect: (date: string) => void;
+  highlightStart?: string | null;
+  highlightEnd?: string | null;
+}) {
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  const toKey = (y: number, m: number, d: number) =>
+    `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+  const isInRange = (key: string) => {
+    if (!highlightStart || !highlightEnd) return false;
+    return key >= highlightStart && key <= highlightEnd;
+  };
+
+  const cells: (number | null)[] = Array(firstDay).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <View style={cal.wrapper}>
+      {/* Month Nav */}
+      <View style={cal.navRow}>
+        <TouchableOpacity onPress={prevMonth} style={cal.navBtn}>
+          <Feather name="chevron-left" size={18} color="#0284C7" />
+        </TouchableOpacity>
+        <Text style={cal.monthLabel}>{MONTHS[viewMonth]} {viewYear}</Text>
+        <TouchableOpacity onPress={nextMonth} style={cal.navBtn}>
+          <Feather name="chevron-right" size={18} color="#0284C7" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Day headers */}
+      <View style={cal.dayRow}>
+        {DAYS.map((d, i) => (
+          <Text key={i} style={cal.dayHdr}>{d}</Text>
+        ))}
+      </View>
+
+      {/* Date grid */}
+      <View style={cal.grid}>
+        {cells.map((day, idx) => {
+          if (day === null) return <View key={`e-${idx}`} style={cal.cell} />;
+          const key = toKey(viewYear, viewMonth, day);
+          const isStart = key === highlightStart;
+          const isEnd = key === highlightEnd;
+          const inRange = isInRange(key);
+          const isSelected = key === selectedDate;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[
+                cal.cell,
+                inRange && cal.rangeCell,
+                (isStart || isEnd || isSelected) && cal.selectedCell,
+              ]}
+              onPress={() => onSelect(key)}
+            >
+              <Text style={[
+                cal.dayNum,
+                (isStart || isEnd || isSelected) && cal.selectedDayNum,
+                inRange && !isStart && !isEnd && cal.rangeDayNum,
+              ]}>
+                {day}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const cal = StyleSheet.create({
+  wrapper: { paddingHorizontal: 4 },
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  navBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
+  monthLabel: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  dayRow: { flexDirection: 'row', marginBottom: 6 },
+  dayHdr: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  cell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', marginVertical: 1 },
+  rangeCell: { backgroundColor: '#DBEAFE' },
+  selectedCell: { backgroundColor: '#0284C7', borderRadius: 20 },
+  dayNum: { fontSize: 13, fontWeight: '600', color: '#334155' },
+  selectedDayNum: { color: '#FFF', fontWeight: '800' },
+  rangeDayNum: { color: '#1D4ED8' },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATE PICKER MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+function DatePickerModal({
+  visible,
+  timeframe,
+  onClose,
+  onApply,
+}: {
+  visible: boolean;
+  timeframe: Timeframe;
+  onClose: () => void;
+  onApply: (data: { date?: string; week?: string; month?: string; start?: string; end?: string }) => void;
+}) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [rangeStart, setRangeStart] = useState<string | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<string | null>(null);
+  const [pickingEnd, setPickingEnd] = useState(false);
+
+  const handleCustomSelect = (date: string) => {
+    if (!pickingEnd) {
+      setRangeStart(date);
+      setRangeEnd(null);
+      setPickingEnd(true);
+    } else {
+      if (date < (rangeStart ?? '')) {
+        setRangeStart(date);
+        setRangeEnd(rangeStart);
+      } else {
+        setRangeEnd(date);
+      }
+      setPickingEnd(false);
+    }
+  };
+
+  const formatDisplay = (d: string) => {
+    const [y, m, day] = d.split('-');
+    return `${day} ${MONTHS[parseInt(m) - 1].slice(0, 3)} ${y}`;
+  };
+
+  const canApply = () => {
+    if (timeframe === 'custom') return rangeStart && rangeEnd;
+    return !!selectedDate;
+  };
+
+  const handleApply = () => {
+    if (timeframe === 'custom') {
+      onApply({ start: rangeStart!, end: rangeEnd! });
+    } else if (timeframe === 'daily') {
+      onApply({ date: selectedDate! });
+    } else if (timeframe === 'weekly') {
+      onApply({ week: selectedDate! });
+    } else {
+      onApply({ month: selectedDate! });
+    }
+  };
+
+  const title =
+    timeframe === 'daily' ? 'Select a Date' :
+    timeframe === 'weekly' ? 'Select Week (pick any day)' :
+    timeframe === 'monthly' ? 'Select Month (pick any day)' :
+    'Select Custom Range';
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={modal.backdrop}>
+        <View style={modal.sheet}>
+          {/* Handle */}
+          <View style={modal.handle} />
+
+          <Text style={modal.title}>{title}</Text>
+
+          {timeframe === 'custom' ? (
+            <>
+              <View style={modal.rangeHint}>
+                <View style={modal.rangeTag}>
+                  <Feather name="corner-down-right" size={12} color="#0284C7" />
+                  <Text style={modal.rangeTagLabel}>From</Text>
+                  <Text style={modal.rangeTagValue}>{rangeStart ? formatDisplay(rangeStart) : '—'}</Text>
+                </View>
+                <View style={modal.rangeDivider} />
+                <View style={modal.rangeTag}>
+                  <Feather name="corner-down-left" size={12} color="#0284C7" />
+                  <Text style={modal.rangeTagLabel}>To</Text>
+                  <Text style={modal.rangeTagValue}>{rangeEnd ? formatDisplay(rangeEnd) : pickingEnd ? 'pick end' : '—'}</Text>
+                </View>
+              </View>
+              <MiniCalendar
+                selectedDate={null}
+                onSelect={handleCustomSelect}
+                highlightStart={rangeStart}
+                highlightEnd={rangeEnd}
+              />
+            </>
+          ) : (
+            <MiniCalendar
+              selectedDate={selectedDate}
+              onSelect={setSelectedDate}
+            />
+          )}
+
+          <View style={modal.actions}>
+            <TouchableOpacity style={modal.cancelBtn} onPress={onClose}>
+              <Text style={modal.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[modal.applyBtn, !canApply() && modal.applyDisabled]}
+              onPress={handleApply}
+              disabled={!canApply()}
+            >
+              <LinearGradient colors={['#0284C7', '#1E3A8A']} style={modal.applyGradient}>
+                <Text style={modal.applyText}>Apply</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const modal = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: '#FFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 40 },
+  handle: { width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  title: { fontSize: 17, fontWeight: '700', color: '#0F172A', textAlign: 'center', marginBottom: 20 },
+  rangeHint: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F9FF', borderRadius: 14, padding: 12, marginBottom: 16, gap: 8 },
+  rangeTag: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  rangeTagLabel: { fontSize: 11, fontWeight: '700', color: '#0284C7', textTransform: 'uppercase' },
+  rangeTagValue: { fontSize: 12, fontWeight: '600', color: '#1E293B' },
+  rangeDivider: { width: 1, height: 20, backgroundColor: '#BAE6FD' },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 24 },
+  cancelBtn: { flex: 1, paddingVertical: 14, backgroundColor: '#F1F5F9', borderRadius: 16, alignItems: 'center' },
+  cancelText: { fontSize: 15, fontWeight: '700', color: '#64748B' },
+  applyBtn: { flex: 2, borderRadius: 16, overflow: 'hidden' },
+  applyDisabled: { opacity: 0.4 },
+  applyGradient: { paddingVertical: 14, alignItems: 'center' },
+  applyText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+const formatKey = (k: string) => {
+  const [y, m, d] = k.split('-');
+  return `${d} ${MONTHS[parseInt(m) - 1].slice(0, 3)} ${y}`;
+};
+
+const getWeekRange = (dateKey: string) => {
+  const d = new Date(dateKey);
+  const day = d.getDay();
+  const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const toK = (dt: Date) =>
+    `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  return { start: toK(mon), end: toK(sun) };
+};
+
+const getMonthLabel = (dateKey: string) => {
+  const [y, m] = dateKey.split('-');
+  return `${MONTHS[parseInt(m)-1]} ${y}`;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN EARNINGS SCREEN
+// ═══════════════════════════════════════════════════════════════════════════
+export default function EarningsScreen() {
+  const [timeframe, setTimeframe] = useState<Timeframe>('daily');
+  const [isLoading, setIsLoading] = useState(false);
+  const [pastTrips, setPastTrips] = useState<Trip[]>([]);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [customRange, setCustomRange] = useState<CustomRange>({ startDate: null, endDate: null });
+  const [displayLabel, setDisplayLabel] = useState('Oct 24, 2026');
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setPastTrips(generateMockTrips(timeframe, customRange));
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [timeframe, customRange]);
+
+  // Reset label when timeframe changes
+  useEffect(() => {
+    if (timeframe === 'daily') setDisplayLabel('Oct 24, 2026');
+    else if (timeframe === 'weekly') setDisplayLabel('Oct 19 – Oct 25, 2026');
+    else if (timeframe === 'monthly') setDisplayLabel('October 2026');
+    else setDisplayLabel('Select range');
+    setCustomRange({ startDate: null, endDate: null });
+  }, [timeframe]);
+
+  const handlePickerApply = (data: { date?: string; week?: string; month?: string; start?: string; end?: string }) => {
+    setPickerVisible(false);
+    if (data.date) {
+      setDisplayLabel(formatKey(data.date));
+    } else if (data.week) {
+      const { start, end } = getWeekRange(data.week);
+      setDisplayLabel(`${formatKey(start)} – ${formatKey(end)}`);
+    } else if (data.month) {
+      setDisplayLabel(getMonthLabel(data.month));
+    } else if (data.start && data.end) {
+      setCustomRange({ startDate: data.start, endDate: data.end });
+      setDisplayLabel(`${formatKey(data.start)} – ${formatKey(data.end)}`);
+    }
+  };
+
+  const totalAmount = pastTrips.reduce((acc, curr) => acc + curr.amount, 0);
+  const TABS: { key: Timeframe; label: string }[] = [
+    { key: 'daily', label: 'Day' },
+    { key: 'weekly', label: 'Week' },
+    { key: 'monthly', label: 'Month' },
+    { key: 'custom', label: 'Custom' },
+  ];
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
+
+        {/* Header */}
+        <Text style={styles.pageTitle}>Earnings History</Text>
+
+        {/* Timeframe Tabs */}
+        <View style={styles.tabsContainer}>
+          {TABS.map(({ key, label }) => (
+            <TouchableOpacity
+              key={key}
+              onPress={() => setTimeframe(key)}
+              style={[styles.tabBtn, timeframe === key ? styles.tabActive : styles.tabInactive]}
+            >
+              <Text style={[styles.tabText, timeframe === key ? styles.tabTextActive : styles.tabTextInactive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Date Selector */}
+        <TouchableOpacity style={styles.dateSelector} onPress={() => setPickerVisible(true)}>
+          <View style={styles.rowCenter}>
+            <View style={styles.calIconBox}>
+              <Feather name="calendar" size={16} color="#0284C7" />
+            </View>
+            <Text style={styles.dateText} numberOfLines={1}>{displayLabel}</Text>
+          </View>
+          <View style={styles.editChip}>
+            <Feather name="edit-2" size={12} color="#0284C7" />
+            <Text style={styles.editChipText}>Change</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Hero Card */}
+        <LinearGradient colors={['#0369A1', '#1E3A8A']} style={styles.heroCard}>
+          <View style={styles.heroContent}>
+            <View style={styles.heroTopRow}>
+              <View>
+                <Text style={styles.heroSubtitle}>
+                  {timeframe === 'custom' ? 'CUSTOM RANGE' : `${timeframe.toUpperCase()} EARNINGS`}
+                </Text>
+                <Text style={styles.heroAmount}>₹{totalAmount.toLocaleString()}</Text>
+              </View>
+              <View style={styles.statsPill}>
+                <Feather name="trending-up" size={14} color="#4ADE80" />
+                <Text style={styles.statsText}>+12%</Text>
+              </View>
+            </View>
+
+            <View style={styles.heroMeta}>
+              <View style={styles.metaItem}>
+                <Text style={styles.metaLabel}>TRIPS</Text>
+                <Text style={styles.metaValue}>{pastTrips.length}</Text>
+              </View>
+              <View style={styles.metaDivider} />
+              <View style={styles.metaItem}>
+                <Text style={styles.metaLabel}>AVG / TRIP</Text>
+                <Text style={styles.metaValue}>
+                  ₹{pastTrips.length ? Math.round(totalAmount / pastTrips.length).toLocaleString() : 0}
+                </Text>
+              </View>
+              <View style={styles.metaDivider} />
+              <View style={styles.metaItem}>
+                <Text style={styles.metaLabel}>PERIOD</Text>
+                <Text style={[styles.metaValue, { fontSize: 11, textTransform: 'capitalize' }]}>{timeframe}</Text>
+              </View>
+            </View>
+          </View>
+          <Feather name="bar-chart-2" size={130} color="rgba(255,255,255,0.06)" style={styles.heroBgIcon} />
+        </LinearGradient>
+
+        {/* List */}
+        <Text style={styles.listTitle}>Completed Trips</Text>
+        <View style={styles.listContainer}>
+          {isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color="#0284C7" />
+              <Text style={styles.loadingText}>Loading trips...</Text>
+            </View>
+          ) : pastTrips.length > 0 ? (
+            pastTrips.map((trip) => (
+              <View key={trip.id} style={styles.tripCard}>
+                <View style={styles.rowCenter}>
+                  <View style={styles.tripIconBox}>
+                    <Feather name="check-circle" size={20} color="#16A34A" />
+                  </View>
+                  <View style={styles.tripDetails}>
+                    <Text style={styles.tripType} numberOfLines={1}>{trip.type}</Text>
+                    <Text style={styles.tripDate}>{trip.date}</Text>
+                  </View>
+                </View>
+                <View style={styles.tripRight}>
+                  <Text style={styles.tripAmount}>₹{trip.amount.toLocaleString()}</Text>
+                  <View style={styles.paidBadge}>
+                    <Text style={styles.paidBadgeText}>PAID</Text>
+                  </View>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyBox}>
+              <Feather name="clipboard" size={48} color="#CBD5E1" style={{ marginBottom: 12 }} />
+              <Text style={styles.emptyTitle}>No trips found</Text>
+              <Text style={styles.emptySub}>Select a date using the calendar above.</Text>
+            </View>
+          )}
+        </View>
+
+      </ScrollView>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={pickerVisible}
+        timeframe={timeframe}
+        onClose={() => setPickerVisible(false)}
+        onApply={handlePickerApply}
+      />
+    </SafeAreaView>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════════════════════════════════════
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  scrollPad: { padding: 20, paddingBottom: 60 },
+  rowCenter: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+
+  pageTitle: { fontSize: 28, fontWeight: '800', color: '#0F172A', marginBottom: 20 },
+
+  // Tabs
+  tabsContainer: { flexDirection: 'row', backgroundColor: '#F1F5F9', padding: 5, borderRadius: 16, marginBottom: 14 },
+  tabBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  tabActive: { backgroundColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 3 },
+  tabInactive: { backgroundColor: 'transparent' },
+  tabText: { fontSize: 13, fontWeight: '700' },
+  tabTextActive: { color: '#0284C7' },
+  tabTextInactive: { color: '#94A3B8' },
+
+  // Date Selector
+  dateSelector: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#FFF', borderWidth: 1.5, borderColor: '#DBEAFE',
+    borderRadius: 16, paddingVertical: 13, paddingHorizontal: 14, marginBottom: 20,
+    shadowColor: '#0284C7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  },
+  calIconBox: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  dateText: { fontSize: 14, fontWeight: '700', color: '#1E293B', flex: 1 },
+  editChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, gap: 4 },
+  editChipText: { fontSize: 12, fontWeight: '700', color: '#0284C7' },
+
+  // Hero Card
+  heroCard: { borderRadius: 24, padding: 22, overflow: 'hidden', position: 'relative', marginBottom: 28, shadowColor: '#0369A1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 10 },
+  heroContent: { zIndex: 10 },
+  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  heroSubtitle: { color: '#BAE6FD', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 4 },
+  heroAmount: { fontSize: 38, fontWeight: '900', color: '#FFF' },
+  statsPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(74,222,128,0.15)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, gap: 4 },
+  statsText: { fontSize: 12, fontWeight: '700', color: '#4ADE80' },
+  heroMeta: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 14, alignItems: 'center' },
+  metaItem: { flex: 1, alignItems: 'center' },
+  metaLabel: { color: '#BAE6FD', fontSize: 9, fontWeight: '800', letterSpacing: 1, marginBottom: 4 },
+  metaValue: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  metaDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.15)' },
+  heroBgIcon: { position: 'absolute', right: -20, top: -10, transform: [{ rotate: '-10deg' }] },
+
+  // List
+  listTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginBottom: 14 },
+  listContainer: { flex: 1 },
+
+  loadingBox: { paddingVertical: 40, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 12, fontSize: 14, fontWeight: '700', color: '#0284C7' },
+
+  emptyBox: { paddingVertical: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF', borderRadius: 24, borderWidth: 1, borderColor: '#F1F5F9' },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#64748B' },
+  emptySub: { fontSize: 12, color: '#94A3B8', marginTop: 4, textAlign: 'center', paddingHorizontal: 20 },
+
+  // Trip Card
+  tripCard: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#FFF', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9',
+    marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+  },
+  tripIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  tripDetails: { flex: 1, paddingRight: 8 },
+  tripType: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 3 },
+  tripDate: { fontSize: 12, color: '#64748B' },
+  tripRight: { alignItems: 'flex-end' },
+  tripAmount: { fontSize: 17, fontWeight: '900', color: '#0F172A', marginBottom: 4 },
+  paidBadge: { backgroundColor: '#F0FDF4', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  paidBadgeText: { fontSize: 9, fontWeight: '800', color: '#22C55E', letterSpacing: 0.5 },
+});
