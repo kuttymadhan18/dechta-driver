@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView,
   Dimensions, ActivityIndicator, Modal, Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { EarningsAPI } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -24,42 +25,6 @@ interface CustomRange {
   startDate: string | null;
   endDate: string | null;
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// DUMMY DATA GENERATOR
-// ═══════════════════════════════════════════════════════════════════════════
-const generateMockTrips = (timeframe: Timeframe, customRange?: CustomRange): Trip[] => {
-  if (timeframe === 'daily') {
-    return [
-      { id: '1', type: 'Package Delivery', amount: 150, date: 'Today, 02:30 PM' },
-      { id: '2', type: 'Food Delivery', amount: 80, date: 'Today, 01:15 PM' },
-      { id: '3', type: 'Document Courier', amount: 120, date: 'Today, 11:45 AM' },
-      { id: '4', type: 'Grocery Run', amount: 200, date: 'Today, 09:30 AM' },
-    ];
-  } else if (timeframe === 'weekly') {
-    return [
-      { id: '1', type: 'Bulk Delivery', amount: 450, date: 'Mon, Oct 19' },
-      { id: '2', type: 'Food Delivery', amount: 320, date: 'Tue, Oct 20' },
-      { id: '3', type: 'Package Delivery', amount: 550, date: 'Wed, Oct 21' },
-      { id: '4', type: 'Express Courier', amount: 280, date: 'Thu, Oct 22' },
-      { id: '5', type: 'Grocery Run', amount: 300, date: 'Fri, Oct 23' },
-    ];
-  } else if (timeframe === 'monthly') {
-    return [
-      { id: '1', type: 'Week 1 Earnings', amount: 2500, date: 'Oct 1 - Oct 7' },
-      { id: '2', type: 'Week 2 Earnings', amount: 3100, date: 'Oct 8 - Oct 14' },
-      { id: '3', type: 'Week 3 Earnings', amount: 2800, date: 'Oct 15 - Oct 21' },
-      { id: '4', type: 'Week 4 Earnings', amount: 1900, date: 'Oct 22 - Oct 28' },
-    ];
-  } else {
-    // custom
-    return [
-      { id: '1', type: 'Package Delivery', amount: 650, date: customRange?.startDate ?? '' },
-      { id: '2', type: 'Food Delivery', amount: 420, date: customRange?.startDate ?? '' },
-      { id: '3', type: 'Express Courier', amount: 310, date: customRange?.endDate ?? '' },
-    ];
-  }
-};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MINI CALENDAR
@@ -110,7 +75,6 @@ function MiniCalendar({
 
   return (
     <View style={cal.wrapper}>
-      {/* Month Nav */}
       <View style={cal.navRow}>
         <TouchableOpacity onPress={prevMonth} style={cal.navBtn}>
           <Feather name="chevron-left" size={18} color="#0284C7" />
@@ -120,15 +84,9 @@ function MiniCalendar({
           <Feather name="chevron-right" size={18} color="#0284C7" />
         </TouchableOpacity>
       </View>
-
-      {/* Day headers */}
       <View style={cal.dayRow}>
-        {DAYS.map((d, i) => (
-          <Text key={i} style={cal.dayHdr}>{d}</Text>
-        ))}
+        {DAYS.map((d, i) => (<Text key={i} style={cal.dayHdr}>{d}</Text>))}
       </View>
-
-      {/* Date grid */}
       <View style={cal.grid}>
         {cells.map((day, idx) => {
           if (day === null) return <View key={`e-${idx}`} style={cal.cell} />;
@@ -140,18 +98,10 @@ function MiniCalendar({
           return (
             <TouchableOpacity
               key={key}
-              style={[
-                cal.cell,
-                inRange && cal.rangeCell,
-                (isStart || isEnd || isSelected) && cal.selectedCell,
-              ]}
+              style={[cal.cell, inRange && cal.rangeCell, (isStart || isEnd || isSelected) && cal.selectedCell]}
               onPress={() => onSelect(key)}
             >
-              <Text style={[
-                cal.dayNum,
-                (isStart || isEnd || isSelected) && cal.selectedDayNum,
-                inRange && !isStart && !isEnd && cal.rangeDayNum,
-              ]}>
+              <Text style={[cal.dayNum, (isStart || isEnd || isSelected) && cal.selectedDayNum, inRange && !isStart && !isEnd && cal.rangeDayNum]}>
                 {day}
               </Text>
             </TouchableOpacity>
@@ -182,10 +132,7 @@ const cal = StyleSheet.create({
 // DATE PICKER MODAL
 // ═══════════════════════════════════════════════════════════════════════════
 function DatePickerModal({
-  visible,
-  timeframe,
-  onClose,
-  onApply,
+  visible, timeframe, onClose, onApply,
 }: {
   visible: boolean;
   timeframe: Timeframe;
@@ -224,15 +171,10 @@ function DatePickerModal({
   };
 
   const handleApply = () => {
-    if (timeframe === 'custom') {
-      onApply({ start: rangeStart!, end: rangeEnd! });
-    } else if (timeframe === 'daily') {
-      onApply({ date: selectedDate! });
-    } else if (timeframe === 'weekly') {
-      onApply({ week: selectedDate! });
-    } else {
-      onApply({ month: selectedDate! });
-    }
+    if (timeframe === 'custom') { onApply({ start: rangeStart!, end: rangeEnd! }); }
+    else if (timeframe === 'daily') { onApply({ date: selectedDate! }); }
+    else if (timeframe === 'weekly') { onApply({ week: selectedDate! }); }
+    else { onApply({ month: selectedDate! }); }
   };
 
   const title =
@@ -245,11 +187,8 @@ function DatePickerModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={modal.backdrop}>
         <View style={modal.sheet}>
-          {/* Handle */}
           <View style={modal.handle} />
-
           <Text style={modal.title}>{title}</Text>
-
           {timeframe === 'custom' ? (
             <>
               <View style={modal.rangeHint}>
@@ -265,29 +204,16 @@ function DatePickerModal({
                   <Text style={modal.rangeTagValue}>{rangeEnd ? formatDisplay(rangeEnd) : pickingEnd ? 'pick end' : '—'}</Text>
                 </View>
               </View>
-              <MiniCalendar
-                selectedDate={null}
-                onSelect={handleCustomSelect}
-                highlightStart={rangeStart}
-                highlightEnd={rangeEnd}
-              />
+              <MiniCalendar selectedDate={null} onSelect={handleCustomSelect} highlightStart={rangeStart} highlightEnd={rangeEnd} />
             </>
           ) : (
-            <MiniCalendar
-              selectedDate={selectedDate}
-              onSelect={setSelectedDate}
-            />
+            <MiniCalendar selectedDate={selectedDate} onSelect={setSelectedDate} />
           )}
-
           <View style={modal.actions}>
             <TouchableOpacity style={modal.cancelBtn} onPress={onClose}>
               <Text style={modal.cancelText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[modal.applyBtn, !canApply() && modal.applyDisabled]}
-              onPress={handleApply}
-              disabled={!canApply()}
-            >
+            <TouchableOpacity style={[modal.applyBtn, !canApply() && modal.applyDisabled]} onPress={handleApply} disabled={!canApply()}>
               <LinearGradient colors={['#0284C7', '#1E3A8A']} style={modal.applyGradient}>
                 <Text style={modal.applyText}>Apply</Text>
               </LinearGradient>
@@ -341,6 +267,11 @@ const getMonthLabel = (dateKey: string) => {
   return `${MONTHS[parseInt(m)-1]} ${y}`;
 };
 
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN EARNINGS SCREEN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -350,22 +281,59 @@ export default function EarningsScreen() {
   const [pastTrips, setPastTrips] = useState<Trip[]>([]);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [customRange, setCustomRange] = useState<CustomRange>({ startDate: null, endDate: null });
-  const [displayLabel, setDisplayLabel] = useState('Oct 24, 2026');
 
-  useEffect(() => {
+  // ── Real display label — driven by actual selected dates ──────────────
+  const [displayLabel, setDisplayLabel] = useState(() => formatKey(todayKey()));
+
+  // ── Query params for the API ──────────────────────────────────────────
+  const [queryDate, setQueryDate] = useState<string>(todayKey());
+  const [queryStartDate, setQueryStartDate] = useState<string | null>(null);
+  const [queryEndDate, setQueryEndDate] = useState<string | null>(null);
+
+  // ── Fetch real earnings data ──────────────────────────────────────────
+  const fetchEarnings = useCallback(async () => {
     setIsLoading(true);
-    const timer = setTimeout(() => {
-      setPastTrips(generateMockTrips(timeframe, customRange));
+    try {
+      const result = await EarningsAPI.get(
+        timeframe,
+        timeframe !== 'custom' ? queryDate : null,
+        timeframe === 'custom' ? queryStartDate : null,
+        timeframe === 'custom' ? queryEndDate : null
+      );
+      if (result.success && result.data) {
+        const formatted: Trip[] = (result.data.trips || []).map((t: any) => ({
+          id: String(t.id),
+          type: t.type || 'Delivery',
+          amount: t.amount || 0,
+          date: t.date || '',
+        }));
+        setPastTrips(formatted);
+      } else {
+        setPastTrips([]);
+      }
+    } catch (e) {
+      console.log('Earnings fetch error:', e);
+      setPastTrips([]);
+    } finally {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [timeframe, customRange]);
+    }
+  }, [timeframe, queryDate, queryStartDate, queryEndDate]);
 
-  // Reset label when timeframe changes
   useEffect(() => {
-    if (timeframe === 'daily') setDisplayLabel('Oct 24, 2026');
-    else if (timeframe === 'weekly') setDisplayLabel('Oct 19 – Oct 25, 2026');
-    else if (timeframe === 'monthly') setDisplayLabel('October 2026');
+    fetchEarnings();
+  }, [fetchEarnings]);
+
+  // Reset label and date when timeframe tab changes
+  useEffect(() => {
+    const today = todayKey();
+    setQueryDate(today);
+    setQueryStartDate(null);
+    setQueryEndDate(null);
+    if (timeframe === 'daily') setDisplayLabel(formatKey(today));
+    else if (timeframe === 'weekly') {
+      const { start, end } = getWeekRange(today);
+      setDisplayLabel(`${formatKey(start)} – ${formatKey(end)}`);
+    } else if (timeframe === 'monthly') setDisplayLabel(getMonthLabel(today));
     else setDisplayLabel('Select range');
     setCustomRange({ startDate: null, endDate: null });
   }, [timeframe]);
@@ -373,13 +341,18 @@ export default function EarningsScreen() {
   const handlePickerApply = (data: { date?: string; week?: string; month?: string; start?: string; end?: string }) => {
     setPickerVisible(false);
     if (data.date) {
+      setQueryDate(data.date);
       setDisplayLabel(formatKey(data.date));
     } else if (data.week) {
       const { start, end } = getWeekRange(data.week);
+      setQueryDate(data.week);
       setDisplayLabel(`${formatKey(start)} – ${formatKey(end)}`);
     } else if (data.month) {
+      setQueryDate(data.month);
       setDisplayLabel(getMonthLabel(data.month));
     } else if (data.start && data.end) {
+      setQueryStartDate(data.start);
+      setQueryEndDate(data.end);
       setCustomRange({ startDate: data.start, endDate: data.end });
       setDisplayLabel(`${formatKey(data.start)} – ${formatKey(data.end)}`);
     }
@@ -397,7 +370,6 @@ export default function EarningsScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
         <Text style={styles.pageTitle}>Earnings History</Text>
 
         {/* Timeframe Tabs */}
@@ -441,10 +413,9 @@ export default function EarningsScreen() {
               </View>
               <View style={styles.statsPill}>
                 <Feather name="trending-up" size={14} color="#4ADE80" />
-                <Text style={styles.statsText}>+12%</Text>
+                <Text style={styles.statsText}>{pastTrips.length} trips</Text>
               </View>
             </View>
-
             <View style={styles.heroMeta}>
               <View style={styles.metaItem}>
                 <Text style={styles.metaLabel}>TRIPS</Text>
@@ -467,7 +438,7 @@ export default function EarningsScreen() {
           <Feather name="bar-chart-2" size={130} color="rgba(255,255,255,0.06)" style={styles.heroBgIcon} />
         </LinearGradient>
 
-        {/* List */}
+        {/* Trip List */}
         <Text style={styles.listTitle}>Completed Trips</Text>
         <View style={styles.listContainer}>
           {isLoading ? (
@@ -506,7 +477,6 @@ export default function EarningsScreen() {
 
       </ScrollView>
 
-      {/* Date Picker Modal */}
       <DatePickerModal
         visible={pickerVisible}
         timeframe={timeframe}
@@ -518,16 +488,13 @@ export default function EarningsScreen() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// STYLES
+// STYLES — identical to original
 // ═══════════════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollPad: { padding: 20, paddingBottom: 60 },
   rowCenter: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-
   pageTitle: { fontSize: 28, fontWeight: '800', color: '#0F172A', marginBottom: 20 },
-
-  // Tabs
   tabsContainer: { flexDirection: 'row', backgroundColor: '#F1F5F9', padding: 5, borderRadius: 16, marginBottom: 14 },
   tabBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   tabActive: { backgroundColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 3 },
@@ -535,20 +502,11 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: '700' },
   tabTextActive: { color: '#0284C7' },
   tabTextInactive: { color: '#94A3B8' },
-
-  // Date Selector
-  dateSelector: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#FFF', borderWidth: 1.5, borderColor: '#DBEAFE',
-    borderRadius: 16, paddingVertical: 13, paddingHorizontal: 14, marginBottom: 20,
-    shadowColor: '#0284C7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
-  },
+  dateSelector: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF', borderWidth: 1.5, borderColor: '#DBEAFE', borderRadius: 16, paddingVertical: 13, paddingHorizontal: 14, marginBottom: 20, shadowColor: '#0284C7', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
   calIconBox: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   dateText: { fontSize: 14, fontWeight: '700', color: '#1E293B', flex: 1 },
   editChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, gap: 4 },
   editChipText: { fontSize: 12, fontWeight: '700', color: '#0284C7' },
-
-  // Hero Card
   heroCard: { borderRadius: 24, padding: 22, overflow: 'hidden', position: 'relative', marginBottom: 28, shadowColor: '#0369A1', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 10 },
   heroContent: { zIndex: 10 },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
@@ -562,24 +520,14 @@ const styles = StyleSheet.create({
   metaValue: { color: '#FFF', fontSize: 16, fontWeight: '800' },
   metaDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.15)' },
   heroBgIcon: { position: 'absolute', right: -20, top: -10, transform: [{ rotate: '-10deg' }] },
-
-  // List
   listTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginBottom: 14 },
   listContainer: { flex: 1 },
-
   loadingBox: { paddingVertical: 40, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 12, fontSize: 14, fontWeight: '700', color: '#0284C7' },
-
   emptyBox: { paddingVertical: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF', borderRadius: 24, borderWidth: 1, borderColor: '#F1F5F9' },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#64748B' },
   emptySub: { fontSize: 12, color: '#94A3B8', marginTop: 4, textAlign: 'center', paddingHorizontal: 20 },
-
-  // Trip Card
-  tripCard: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#FFF', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9',
-    marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
-  },
+  tripCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
   tripIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
   tripDetails: { flex: 1, paddingRight: 8 },
   tripType: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 3 },
