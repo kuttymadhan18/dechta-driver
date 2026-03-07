@@ -182,12 +182,11 @@ async function completeRegistration(request, reply) {
       if (referrer && referrer.id !== driverId) {
         await supabaseAdmin
           .from('driver_referrals')
-          .insert({
+          .upsert({
             referrer_id: referrer.id,
             referred_id: driverId,
             bonus_paid: false,
-          })
-          .on('conflict', 'referrer_id,referred_id', () => {});
+          }, { onConflict: 'referrer_id,referred_id', ignoreDuplicates: true });
       }
     }
 
@@ -206,21 +205,11 @@ async function completeRegistration(request, reply) {
     }
 
     // 6. Create wallet if not exists
-    const { data: existingWallet } = await supabaseAdmin
-      .from('driver_wallets')
-      .select('id')
-      .eq('driver_id', driverId)
-      .single();
-
-    if (!existingWallet) {
-      // driver_wallets references driver_details.id — use driver_profiles.id
-      // Create a matching driver_details entry if needed or insert direct
-      await supabaseAdmin.from('driver_wallets').insert({
-        driver_id: driverId,
-        balance: 0,
-        outstanding_dues: 0,
-      }).on('conflict', () => {});
-    }
+    await supabaseAdmin.from('driver_wallets').upsert({
+      driver_id: driverId,
+      balance: 0,
+      outstanding_dues: 0,
+    }, { onConflict: 'driver_id', ignoreDuplicates: true });
 
     return reply.send({
       success: true,
