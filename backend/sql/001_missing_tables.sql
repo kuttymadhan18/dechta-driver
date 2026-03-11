@@ -1,6 +1,6 @@
 -- ============================================================
 -- QC DRIVER APP — MISSING TABLES MIGRATION
--- Run this in your Supabase SQL Editor
+-- Run this in your PostgreSQL Editor
 -- ============================================================
 
 -- 1. driver_notifications — alerts/offers shown in home screen bell
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS public.driver_leaderboard_cache (
 );
 
 -- ============================================================
--- SUPABASE REALTIME — enable realtime on key tables
+-- REALTIME — enable realtime on key tables
 -- ============================================================
 ALTER TABLE public.driver_profiles       REPLICA IDENTITY FULL;
 ALTER TABLE public.delivery_trips        REPLICA IDENTITY FULL;
@@ -95,9 +95,9 @@ ALTER TABLE public.driver_wallets        REPLICA IDENTITY FULL;
 ALTER TABLE public.orders                REPLICA IDENTITY FULL;
 
 -- ============================================================
--- SUPABASE STORAGE BUCKETS (run via Supabase dashboard or API)
+-- STORAGE BUCKETS (run via API)
 -- ============================================================
--- Buckets to create manually in Supabase Storage:
+-- Buckets to create manually in Storage:
 --   driver-avatars       (public: true)
 --   driver-documents     (public: false)  ← KYC: Aadhaar, PAN, RC, License
 --   package-photos       (public: false)  ← Pickup/delivery photos

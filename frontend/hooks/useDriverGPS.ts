@@ -9,11 +9,11 @@ interface GPSData {
 
 export default function useDriverGPS(driverMobile: string | undefined | null, isOnline: boolean): GPSData {
     // Default mock location (Chennai)
-    const [location, setLocation] = useState<[number, number]>([13.0827, 80.2707]); 
+    const [location, setLocation] = useState<[number, number]>([13.0827, 80.2707]);
     const [gpsError, setGpsError] = useState<string | null>(null);
 
     useEffect(() => {
-        let isMounted = true; 
+        let isMounted = true;
         let locationSubscription: Location.LocationSubscription | null = null;
 
         const startLocationTracking = async () => {
@@ -39,20 +39,16 @@ export default function useDriverGPS(driverMobile: string | undefined | null, is
                         if (isMounted && position && position.coords) {
                             const { latitude, longitude } = position.coords;
                             setLocation([latitude, longitude]);
-                            
-                            // Clear any previous errors if successful
-                            setGpsError(null); 
 
-                            // --- SUPABASE BACKEND LOGIC (Uncomment later) ---
+                            // Clear any previous errors if successful
+                            setGpsError(null);
+
+                            // --- BACKEND LOGIC ---
                             /*
-                            let safeMobile = String(driverMobile).replace(/\D/g, '').slice(-10);
+                            import { DriverAPI } from '../services/api';
                             const heading = position.coords.heading || 0;
-                            supabase.from('driver_profiles').update({
-                                current_lat: latitude,
-                                current_lng: longitude,
-                                heading: heading, 
-                                last_active: new Date().toISOString()
-                            }).eq('mobile_number', safeMobile).catch(err => console.log(err));
+                            DriverAPI.sendGps(null, latitude, longitude, position.coords.accuracy || 0, position.coords.speed || 0, heading)
+                                .catch(err => console.log('Location update failed', err));
                             */
                         }
                     }
@@ -65,7 +61,7 @@ export default function useDriverGPS(driverMobile: string | undefined | null, is
                     sub.remove();
                 }
 
-            } catch (error: any) { 
+            } catch (error: any) {
                 if (isMounted) setGpsError(error.message || "Failed to get location");
             }
         };

@@ -1,31 +1,26 @@
 services:
   - type: web
-    name: qc-driver-backend
-    env: node
-    region: singapore
-    plan: free
+    name: dechta-driver-backend
+    runtime: node
     buildCommand: npm install
-    startCommand: node src/server.js
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
-      # Set these in Render dashboard — do NOT commit real values:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
+      - key: DATABASE_URL
+        sync: false        # Set manually in Render dashboard
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
       - key: OTP_PROVIDER
-        value: mock
-      - key: MSG91_AUTH_KEY
+        value: mock        # Change to msg91 when ready
+      - key: OTP_EXPIRY_MINUTES
+        value: "5"
+      - key: CLOUDINARY_CLOUD_NAME
         sync: false
-      - key: MSG91_TEMPLATE_ID
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
         sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: "*"

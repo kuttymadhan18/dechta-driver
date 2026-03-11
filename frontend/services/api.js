@@ -8,7 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ── Config ───────────────────────────────────────────────────
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://qc-driver-backend.onrender.com';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dechta-driver.onrender.com';
 
 // ── Token Management ─────────────────────────────────────────
 export const TokenStore = {
@@ -104,7 +104,19 @@ export const AuthAPI = {
   // Check if logged in
   isLoggedIn: async () => {
     const token = await TokenStore.get();
-    return !!token;
+    if (!token) return false;
+    try {
+      // Verify token to ensure it isn't an old Supabase cache
+      await apiRequest('/api/driver/profile');
+      return true;
+    } catch (e) {
+      // Allow offline access
+      if (e.message.includes('internet connection')) return true;
+
+      // If unauthorized or other error, clear the fake/old token
+      await AuthAPI.logout();
+      return false;
+    }
   },
 };
 

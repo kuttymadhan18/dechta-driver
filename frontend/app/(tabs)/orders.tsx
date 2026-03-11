@@ -30,19 +30,19 @@ const cancelReasonsList = [
 // VEHICLE PROFILES
 // ═══════════════════════════════════════════════════════════════════════════
 const VEHICLE_PROFILES: Record<string, { osrm: string; color: string; altColor: string; label: string; emoji: string }> = {
-  '2 Wheeler':  { osrm: 'bike',    color: '#7C3AED', altColor: '#A78BFA', label: '2-Wheeler',  emoji: '🛵' },
-  '3 Wheeler':  { osrm: 'driving', color: '#0284C7', altColor: '#38BDF8', label: '3-Wheeler',  emoji: '🛺' },
+  '2 Wheeler': { osrm: 'bike', color: '#7C3AED', altColor: '#A78BFA', label: '2-Wheeler', emoji: '🛵' },
+  '3 Wheeler': { osrm: 'driving', color: '#0284C7', altColor: '#38BDF8', label: '3-Wheeler', emoji: '🛺' },
   'Mini Truck': { osrm: 'driving', color: '#0284C7', altColor: '#38BDF8', label: 'Mini Truck', emoji: '🚚' },
 };
 const DEFAULT_PROFILE = { osrm: 'driving', color: '#0284C7', altColor: '#38BDF8', label: 'Vehicle', emoji: '🚗' };
 
 const buildLeafletHTML = (
-  driver:      { latitude: number; longitude: number },
-  pickup:      { latitude: number; longitude: number },
-  drop:        { latitude: number; longitude: number },
-  step:        number,
+  driver: { latitude: number; longitude: number },
+  pickup: { latitude: number; longitude: number },
+  drop: { latitude: number; longitude: number },
+  step: number,
   pickupLabel: string,
-  dropLabel:   string,
+  dropLabel: string,
   vehicleType: string
 ) => {
   const vp = VEHICLE_PROFILES[vehicleType] ?? DEFAULT_PROFILE;
@@ -177,35 +177,35 @@ export default function OrdersScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const [tab, setTab]                         = useState<'new' | 'history'>('new');
-  const [historyFilter, setHistoryFilter]     = useState('Completed');
+  const [tab, setTab] = useState<'new' | 'history'>('new');
+  const [historyFilter, setHistoryFilter] = useState('Completed');
   // ── REAL STATE (no mock arrays) ──────────────────────────────────────
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
-  const [historyOrders, setHistoryOrders]     = useState<any[]>([]);
-  const [loadingOrders, setLoadingOrders]     = useState(false);
-  const [loadingHistory, setLoadingHistory]   = useState(false);
+  const [historyOrders, setHistoryOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const [activeTrip, setActiveTrip]           = useState<any>(null);
+  const [activeTrip, setActiveTrip] = useState<any>(null);
   const [navigatingOrder, setNavigatingOrder] = useState<any>(null);
-  const [driverLocation, setDriverLocation]   = useState<{ latitude: number; longitude: number } | null>(null);
-  const locationSubscription                  = useRef<Location.LocationSubscription | null>(null);
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [isAckModalOpen, setIsAckModalOpen]       = useState(false);
-  const [isChatOpen, setIsChatOpen]               = useState(false);
+  const [isAckModalOpen, setIsAckModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [cancelReason, setCancelReason] = useState('');
-  const [otpInput, setOtpInput]         = useState('');
+  const [otpInput, setOtpInput] = useState('');
   const [packagePhoto, setPackagePhoto] = useState<string | null>(null);
 
-  // ── Computed GPS coords from active trip (real Supabase data) ────────
+  // ── Computed GPS coords from active trip (real Backend data) ────────
   const pickupLocation = {
-    latitude:  activeTrip?.pickup_lat  ?? activeTrip?.pickup_latitude  ?? 13.0900,
-    longitude: activeTrip?.pickup_lng  ?? activeTrip?.pickup_longitude ?? 80.2800,
+    latitude: activeTrip?.pickup_lat ?? activeTrip?.pickup_latitude ?? 13.0900,
+    longitude: activeTrip?.pickup_lng ?? activeTrip?.pickup_longitude ?? 80.2800,
   };
   const dropLocation = {
-    latitude:  activeTrip?.drop_lat    ?? activeTrip?.drop_latitude    ?? 13.1050,
-    longitude: activeTrip?.drop_lng    ?? activeTrip?.drop_longitude   ?? 80.2600,
+    latitude: activeTrip?.drop_lat ?? activeTrip?.drop_latitude ?? 13.1050,
+    longitude: activeTrip?.drop_lng ?? activeTrip?.drop_longitude ?? 80.2600,
   };
 
   // ── Fetch available orders on mount ──────────────────────────────────
@@ -298,7 +298,7 @@ export default function OrdersScreen() {
             step: t.status === 'picked_up' ? 1 : 0,
           });
         }
-      } catch (_) {}
+      } catch (_) { }
     })();
   }, []);
 
@@ -350,7 +350,7 @@ export default function OrdersScreen() {
   const handleIgnore = async (order: any) => {
     try {
       await OrdersAPI.ignore(order.id);
-    } catch (_) {}
+    } catch (_) { }
     setAvailableOrders(prev => prev.filter(o => o.id !== order.id));
     setHistoryOrders(prev => [{ ...order, status: 'Missed', date: new Date().toLocaleDateString('en-IN') }, ...prev]);
   };
@@ -362,16 +362,16 @@ export default function OrdersScreen() {
   };
 
   const handleStartVoiceNavigation = () => {
-    const lat = activeTrip?.step === 0 ? pickupLocation.latitude  : dropLocation.latitude;
+    const lat = activeTrip?.step === 0 ? pickupLocation.latitude : dropLocation.latitude;
     const lng = activeTrip?.step === 0 ? pickupLocation.longitude : dropLocation.longitude;
     const vType = activeTrip?.vehicle_type ?? '';
     const isBike = vType === '2 Wheeler';
-    const iosMode   = isBike ? 'bicycling' : 'driving';
+    const iosMode = isBike ? 'bicycling' : 'driving';
     const droidMode = isBike ? 'b' : 'd';
     const url = Platform.select({
-      ios:     `comgooglemaps://?daddr=${lat},${lng}&directionsmode=${iosMode}`,
+      ios: `comgooglemaps://?daddr=${lat},${lng}&directionsmode=${iosMode}`,
       android: `google.navigation:q=${lat},${lng}&mode=${droidMode}`,
-      web:     `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=${iosMode}`,
+      web: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=${iosMode}`,
     });
     if (url) Linking.canOpenURL(url).then(ok => {
       if (ok) Linking.openURL(url);
@@ -400,7 +400,7 @@ export default function OrdersScreen() {
     try {
       const tripId = activeTrip?.tripId || activeTrip?.id;
       if (tripId) await OrdersAPI.confirmPickup(tripId, packagePhoto);
-    } catch (_) {}
+    } catch (_) { }
 
     setIsAckModalOpen(false);
     if (activeTrip?.step === 0) {
@@ -415,7 +415,7 @@ export default function OrdersScreen() {
       try {
         const tripId = activeTrip?.tripId || activeTrip?.id;
         if (tripId) await OrdersAPI.arrivedDropoff(tripId);
-      } catch (_) {}
+      } catch (_) { }
       setActiveTrip({ ...activeTrip, step: 2 });
       Alert.alert('OTP Sent', 'An SMS with the 4-digit PIN has been sent to the customer.');
     }
@@ -466,12 +466,12 @@ export default function OrdersScreen() {
 
   const mapHtml = driverLocation
     ? buildLeafletHTML(
-        driverLocation, pickupLocation, dropLocation,
-        activeTrip?.step ?? 0,
-        activeTrip?.pickup ?? 'Pickup',
-        activeTrip?.drop   ?? 'Drop-off',
-        activeTrip?.vehicle_type ?? ''
-      )
+      driverLocation, pickupLocation, dropLocation,
+      activeTrip?.step ?? 0,
+      activeTrip?.pickup ?? 'Pickup',
+      activeTrip?.drop ?? 'Drop-off',
+      activeTrip?.vehicle_type ?? ''
+    )
     : null;
 
   const activeAvailableOrders = availableOrders.filter(
@@ -496,11 +496,11 @@ export default function OrdersScreen() {
       {/* TABS */}
       <View style={styles.tabContainer}>
         <View style={styles.tabBg}>
-          <TouchableOpacity onPress={() => handleTabSwitch('new')} style={[styles.tabBtn, tab==='new' && styles.tabBtnActive]}>
-            <Text style={[styles.tabText, tab==='new' && styles.tabTextActive]}>Available</Text>
+          <TouchableOpacity onPress={() => handleTabSwitch('new')} style={[styles.tabBtn, tab === 'new' && styles.tabBtnActive]}>
+            <Text style={[styles.tabText, tab === 'new' && styles.tabTextActive]}>Available</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleTabSwitch('history')} style={[styles.tabBtn, tab==='history' && styles.tabBtnActive]}>
-            <Text style={[styles.tabText, tab==='history' && styles.tabTextActive]}>History</Text>
+          <TouchableOpacity onPress={() => handleTabSwitch('history')} style={[styles.tabBtn, tab === 'history' && styles.tabBtnActive]}>
+            <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>History</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -514,7 +514,7 @@ export default function OrdersScreen() {
             </View>
           ) : activeAvailableOrders.length > 0 ? (
             <>
-              <Text style={styles.sectionHeader}><View style={styles.dotPulse}/> NEW REQUESTS</Text>
+              <Text style={styles.sectionHeader}><View style={styles.dotPulse} /> NEW REQUESTS</Text>
               {activeAvailableOrders.map(order => (
                 <View key={order.id} style={styles.orderCard}>
                   <View style={styles.rowBetween}>
@@ -522,13 +522,13 @@ export default function OrdersScreen() {
                       <View style={styles.vehicleBadge}><Text style={styles.vehicleBadgeText}>{order.vehicle_type} #{order.id}</Text></View>
                       <Text style={styles.orderTitle}>{order.type}</Text>
                     </View>
-                    <View style={{alignItems:'flex-end'}}>
+                    <View style={{ alignItems: 'flex-end' }}>
                       <Text style={styles.orderPayout}>₹{order.payout}</Text>
                       <Text style={styles.orderDist}>{order.distance}</Text>
                     </View>
                   </View>
                   <View style={styles.addressRow}>
-                    <Feather name="map-pin" size={14} color="#94A3B8" style={{marginRight:6}}/>
+                    <Feather name="map-pin" size={14} color="#94A3B8" style={{ marginRight: 6 }} />
                     <Text style={styles.addressText}>{order.pickup}</Text>
                   </View>
                   <View style={styles.actionRow}>
@@ -540,20 +540,20 @@ export default function OrdersScreen() {
             </>
           ) : (
             <View style={styles.emptyState}>
-              <Feather name="package" size={48} color="#CBD5E1"/>
+              <Feather name="package" size={48} color="#CBD5E1" />
               <Text style={styles.emptyTitle}>No Orders Available</Text>
               <Text style={styles.emptySub}>You're all caught up! Waiting for pings...</Text>
-              <TouchableOpacity onPress={fetchAvailableOrders} style={{marginTop:16,backgroundColor:'#EFF6FF',paddingHorizontal:20,paddingVertical:10,borderRadius:12}}>
-                <Text style={{color:'#0284C7',fontWeight:'bold'}}>Refresh</Text>
+              <TouchableOpacity onPress={fetchAvailableOrders} style={{ marginTop: 16, backgroundColor: '#EFF6FF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}>
+                <Text style={{ color: '#0284C7', fontWeight: 'bold' }}>Refresh</Text>
               </TouchableOpacity>
             </View>
           )
         ) : (
           <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.historyFiltersRow} contentContainerStyle={{paddingBottom:16}}>
-              {['Completed','Cancelled','Missed'].map(f => (
-                <TouchableOpacity key={f} onPress={() => { setHistoryFilter(f); fetchHistory(f); }} style={[styles.filterPill, historyFilter===f ? styles.filterPillActive : styles.filterPillInactive]}>
-                  <Text style={[styles.filterText, historyFilter===f ? styles.filterTextActive : styles.filterTextInactive]}>{f}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.historyFiltersRow} contentContainerStyle={{ paddingBottom: 16 }}>
+              {['Completed', 'Cancelled', 'Missed'].map(f => (
+                <TouchableOpacity key={f} onPress={() => { setHistoryFilter(f); fetchHistory(f); }} style={[styles.filterPill, historyFilter === f ? styles.filterPillActive : styles.filterPillInactive]}>
+                  <Text style={[styles.filterText, historyFilter === f ? styles.filterTextActive : styles.filterTextInactive]}>{f}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -573,14 +573,14 @@ export default function OrdersScreen() {
                 {order.cancel_reason && <View style={styles.reasonBox}><Text style={styles.reasonTextSmall}>Reason: {order.cancel_reason}</Text></View>}
                 <View style={styles.historyFooter}>
                   <Text style={styles.historyDate}>{order.date}</Text>
-                  <View style={[styles.statusBadge, order.status==='Completed'?styles.statusGreen:order.status==='Cancelled'?styles.statusRed:styles.statusGray]}>
-                    <Text style={[styles.statusText,order.status==='Completed'?{color:'#15803D'}:order.status==='Cancelled'?{color:'#B91C1C'}:{color:'#475569'}]}>{order.status}</Text>
+                  <View style={[styles.statusBadge, order.status === 'Completed' ? styles.statusGreen : order.status === 'Cancelled' ? styles.statusRed : styles.statusGray]}>
+                    <Text style={[styles.statusText, order.status === 'Completed' ? { color: '#15803D' } : order.status === 'Cancelled' ? { color: '#B91C1C' } : { color: '#475569' }]}>{order.status}</Text>
                   </View>
                 </View>
               </View>
             )) : (
               <View style={styles.emptyState}>
-                <Feather name="clipboard" size={48} color="#CBD5E1"/>
+                <Feather name="clipboard" size={48} color="#CBD5E1" />
                 <Text style={styles.emptyTitle}>No {historyFilter} Orders</Text>
               </View>
             )}
@@ -592,28 +592,28 @@ export default function OrdersScreen() {
       <Modal transparent visible={!!navigatingOrder} animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.navModalContent}>
-            <View style={styles.successIconBox}><Feather name="check" size={32} color="#FFF"/></View>
+            <View style={styles.successIconBox}><Feather name="check" size={32} color="#FFF" /></View>
             <Text style={styles.navModalTitle}>Order Accepted!</Text>
             <Text style={styles.navModalSub}>Navigate to complete delivery</Text>
             <View style={styles.routeBox}>
               <View style={styles.routeRow}>
-                <View style={[styles.routeDot,{backgroundColor:'#22C55E'}]}/>
-                <View style={{flex:1,marginLeft:12}}>
+                <View style={[styles.routeDot, { backgroundColor: '#22C55E' }]} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.routeLabel}>FROM:</Text>
                   <Text style={styles.routeAddress} numberOfLines={2}>{navigatingOrder?.pickup}</Text>
                 </View>
               </View>
-              <View style={styles.routeDivider}/>
+              <View style={styles.routeDivider} />
               <View style={styles.routeRow}>
-                <View style={[styles.routeDot,{backgroundColor:'#0284C7'}]}/>
-                <View style={{flex:1,marginLeft:12}}>
+                <View style={[styles.routeDot, { backgroundColor: '#0284C7' }]} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.routeLabel}>TO:</Text>
                   <Text style={styles.routeAddress} numberOfLines={2}>{navigatingOrder?.drop}</Text>
                 </View>
               </View>
             </View>
             <TouchableOpacity onPress={handleGoToLocation} style={styles.goBtn}>
-              <Feather name="navigation" size={20} color="#FFF"/>
+              <Feather name="navigation" size={20} color="#FFF" />
               <Text style={styles.goBtnText}>Open Active Trip</Text>
             </TouchableOpacity>
           </View>
@@ -639,19 +639,19 @@ export default function OrdersScreen() {
               />
             ) : (
               <>
-                <LinearGradient colors={['#E0F2FE','#BAE6FD','#7DD3FC']} style={StyleSheet.absoluteFill}/>
+                <LinearGradient colors={['#E0F2FE', '#BAE6FD', '#7DD3FC']} style={StyleSheet.absoluteFill} />
                 <View style={styles.mapPinContainer}>
-                  <View style={styles.mapPulse}/>
-                  <View style={styles.mapPin}><Feather name="loader" size={20} color="#FFF"/></View>
+                  <View style={styles.mapPulse} />
+                  <View style={styles.mapPin}><Feather name="loader" size={20} color="#FFF" /></View>
                 </View>
               </>
             )}
             <View style={styles.mapTopBar}>
-              <TouchableOpacity style={styles.mapBackBtn} onPress={() => Alert.alert('Trip Active','You cannot leave until the trip is completed or cancelled.')}>
-                <Feather name="shield" size={24} color="#0F172A"/>
+              <TouchableOpacity style={styles.mapBackBtn} onPress={() => Alert.alert('Trip Active', 'You cannot leave until the trip is completed or cancelled.')}>
+                <Feather name="shield" size={24} color="#0F172A" />
               </TouchableOpacity>
               <View style={styles.liveGpsBadge}>
-                <View style={styles.liveGpsDot}/>
+                <View style={styles.liveGpsDot} />
                 <Text style={styles.liveGpsText}>Live GPS Tracking</Text>
               </View>
             </View>
@@ -659,7 +659,7 @@ export default function OrdersScreen() {
 
           {/* BOTTOM SHEET */}
           <View style={styles.bottomSheet}>
-            <View style={styles.sheetHandle}/>
+            <View style={styles.sheetHandle} />
 
             {activeTrip?.step === 0 && (
               <>
@@ -670,37 +670,37 @@ export default function OrdersScreen() {
                   </Text></View>
                 </View>
                 <Text style={styles.sheetSubtitle}>NAVIGATING TO PICKUP</Text>
-                <Text style={styles.sheetTitle}>On Route <Text style={{color:'#94A3B8'}}>({activeTrip?.distance || ''})</Text></Text>
+                <Text style={styles.sheetTitle}>On Route <Text style={{ color: '#94A3B8' }}>({activeTrip?.distance || ''})</Text></Text>
                 <Text style={styles.sheetAddress} numberOfLines={2}>{activeTrip?.pickup || ''}</Text>
                 <View style={styles.sheetActionRow}>
                   <TouchableOpacity onPress={handleStartVoiceNavigation} style={styles.navBtn}>
-                    <Feather name="navigation" size={20} color="#FFF"/>
+                    <Feather name="navigation" size={20} color="#FFF" />
                     <Text style={styles.navBtnText}>Navigate ↗</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setIsChatOpen(true)} style={[styles.circleBtn,{backgroundColor:'#E0F2FE'}]}>
-                    <Feather name="message-circle" size={22} color="#0284C7"/>
+                  <TouchableOpacity onPress={() => setIsChatOpen(true)} style={[styles.circleBtn, { backgroundColor: '#E0F2FE' }]}>
+                    <Feather name="message-circle" size={22} color="#0284C7" />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => Linking.openURL('tel:+919876543210')} style={[styles.circleBtn,{backgroundColor:'#ECFDF5'}]}>
-                    <Feather name="phone" size={22} color="#16A34A"/>
+                  <TouchableOpacity onPress={() => Linking.openURL('tel:+919876543210')} style={[styles.circleBtn, { backgroundColor: '#ECFDF5' }]}>
+                    <Feather name="phone" size={22} color="#16A34A" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.quickStrip}>
-                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Share ETA','ETA shared with customer via SMS.')}>
-                    <Feather name="clock" size={15} color="#7C3AED"/>
+                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Share ETA', 'ETA shared with customer via SMS.')}>
+                    <Feather name="clock" size={15} color="#7C3AED" />
                     <Text style={styles.quickChipText}>Share ETA</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Report Issue','Issue reported to support team.')}>
-                    <Feather name="alert-triangle" size={15} color="#EF4444"/>
+                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Report Issue', 'Issue reported to support team.')}>
+                    <Feather name="alert-triangle" size={15} color="#EF4444" />
                     <Text style={styles.quickChipText}>Report Issue</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.quickChip} onPress={() => Linking.openURL('https://www.google.com/maps/search/parking+near+me')}>
-                    <Feather name="map-pin" size={15} color="#0284C7"/>
+                    <Feather name="map-pin" size={15} color="#0284C7" />
                     <Text style={styles.quickChipText}>Find Parking</Text>
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity onPress={handleArrivePickup} style={styles.arriveBtn}>
                   <Text style={styles.arriveBtnText}>Arrived at Pickup ✓</Text>
-                  <Feather name="check-circle" size={24} color="#0284C7"/>
+                  <Feather name="check-circle" size={24} color="#0284C7" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsCancelModalOpen(true)} style={styles.sheetCancelBtn}>
                   <Text style={styles.sheetCancelText}>Cancel Order</Text>
@@ -711,46 +711,46 @@ export default function OrdersScreen() {
             {activeTrip?.step === 1 && (
               <>
                 <View style={styles.sheetTopRow}>
-                  <View style={[styles.stepBadge,{backgroundColor:'#ECFDF5'}]}>
-                    <Text style={[styles.stepBadgeText,{color:'#16A34A'}]}>STEP 2 OF 3</Text>
+                  <View style={[styles.stepBadge, { backgroundColor: '#ECFDF5' }]}>
+                    <Text style={[styles.stepBadgeText, { color: '#16A34A' }]}>STEP 2 OF 3</Text>
                   </View>
                   <View style={styles.payoutPill}>
-                    <Feather name="dollar-sign" size={12} color="#0284C7"/>
+                    <Feather name="dollar-sign" size={12} color="#0284C7" />
                     <Text style={styles.payoutPillText}>₹{activeTrip?.payout} on delivery</Text>
                   </View>
                 </View>
-                <Text style={[styles.sheetSubtitle,{color:'#16A34A'}]}>NAVIGATING TO CUSTOMER</Text>
+                <Text style={[styles.sheetSubtitle, { color: '#16A34A' }]}>NAVIGATING TO CUSTOMER</Text>
                 <Text style={styles.sheetTitle}>Out for Delivery</Text>
                 <Text style={styles.sheetAddress} numberOfLines={2}>{activeTrip?.drop || ''}</Text>
                 <View style={styles.sheetActionRow}>
-                  <TouchableOpacity onPress={handleStartVoiceNavigation} style={[styles.navBtn,{backgroundColor:'#16A34A'}]}>
-                    <Feather name="navigation" size={20} color="#FFF"/>
+                  <TouchableOpacity onPress={handleStartVoiceNavigation} style={[styles.navBtn, { backgroundColor: '#16A34A' }]}>
+                    <Feather name="navigation" size={20} color="#FFF" />
                     <Text style={styles.navBtnText}>Navigate ↗</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setIsChatOpen(true)} style={[styles.circleBtn,{backgroundColor:'#E0F2FE'}]}>
-                    <Feather name="message-circle" size={22} color="#0284C7"/>
+                  <TouchableOpacity onPress={() => setIsChatOpen(true)} style={[styles.circleBtn, { backgroundColor: '#E0F2FE' }]}>
+                    <Feather name="message-circle" size={22} color="#0284C7" />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => Linking.openURL('tel:+919876543210')} style={[styles.circleBtn,{backgroundColor:'#ECFDF5'}]}>
-                    <Feather name="phone" size={22} color="#16A34A"/>
+                  <TouchableOpacity onPress={() => Linking.openURL('tel:+919876543210')} style={[styles.circleBtn, { backgroundColor: '#ECFDF5' }]}>
+                    <Feather name="phone" size={22} color="#16A34A" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.quickStrip}>
-                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Add Note','Note sent to customer.')}>
-                    <Feather name="edit-2" size={15} color="#7C3AED"/>
+                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Add Note', 'Note sent to customer.')}>
+                    <Feather name="edit-2" size={15} color="#7C3AED" />
                     <Text style={styles.quickChipText}>Add Note</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Share ETA','ETA shared with customer via SMS.')}>
-                    <Feather name="clock" size={15} color="#EF4444"/>
+                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Share ETA', 'ETA shared with customer via SMS.')}>
+                    <Feather name="clock" size={15} color="#EF4444" />
                     <Text style={styles.quickChipText}>Share ETA</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Safe Drop','Mark for safe-drop at door.')}>
-                    <Feather name="home" size={15} color="#0284C7"/>
+                  <TouchableOpacity style={styles.quickChip} onPress={() => Alert.alert('Safe Drop', 'Mark for safe-drop at door.')}>
+                    <Feather name="home" size={15} color="#0284C7" />
                     <Text style={styles.quickChipText}>Safe Drop</Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={handleArriveDropoff} style={[styles.arriveBtn,{borderColor:'#10B981',backgroundColor:'#ECFDF5'}]}>
-                  <Text style={[styles.arriveBtnText,{color:'#10B981'}]}>Arrived at Drop-off ✓</Text>
-                  <Feather name="check-circle" size={24} color="#10B981"/>
+                <TouchableOpacity onPress={handleArriveDropoff} style={[styles.arriveBtn, { borderColor: '#10B981', backgroundColor: '#ECFDF5' }]}>
+                  <Text style={[styles.arriveBtnText, { color: '#10B981' }]}>Arrived at Drop-off ✓</Text>
+                  <Feather name="check-circle" size={24} color="#10B981" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsCancelModalOpen(true)} style={styles.sheetCancelBtn}>
                   <Text style={styles.sheetCancelText}>Cancel Order</Text>
@@ -760,12 +760,12 @@ export default function OrdersScreen() {
 
             {activeTrip?.step === 2 && (
               <View style={styles.otpSection}>
-                <View style={styles.otpIconBox}><Feather name="key" size={32} color="#0284C7"/></View>
+                <View style={styles.otpIconBox}><Feather name="key" size={32} color="#0284C7" /></View>
                 <Text style={styles.otpTitle}>Complete Delivery</Text>
                 <Text style={styles.otpSub}>Ask the customer for the 4-digit PIN.</Text>
-                <TextInput style={styles.otpInput} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput}/>
-                <TouchableOpacity onPress={handleVerifyOtp} style={[styles.verifyBtn, otpInput.length!==4&&{opacity:0.5}]} disabled={otpInput.length!==4}>
-                  <Text style={styles.verifyBtnText}>Verify & Earn ₹{activeTrip?.payout||0}</Text>
+                <TextInput style={styles.otpInput} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
+                <TouchableOpacity onPress={handleVerifyOtp} style={[styles.verifyBtn, otpInput.length !== 4 && { opacity: 0.5 }]} disabled={otpInput.length !== 4}>
+                  <Text style={styles.verifyBtnText}>Verify & Earn ₹{activeTrip?.payout || 0}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsCancelModalOpen(true)} style={styles.sheetCancelBtn}>
                   <Text style={styles.sheetCancelText}>Cancel Order</Text>
@@ -779,22 +779,22 @@ export default function OrdersScreen() {
             <View style={styles.modalOverlay}>
               <View style={styles.ackModalContent}>
                 <View style={styles.ackHeader}>
-                  <View style={styles.ackIconBox}><Feather name="package" size={28} color="#0284C7"/></View>
-                  <View style={{flex:1,marginLeft:12}}>
+                  <View style={styles.ackIconBox}><Feather name="package" size={28} color="#0284C7" /></View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.ackModalTitle}>Pickup Acknowledgement</Text>
                     <Text style={styles.ackModalSub}>Order #{activeTrip?.id}</Text>
                   </View>
                 </View>
                 <View style={styles.ackWarningBox}>
-                  <Feather name="shield" size={16} color="#B45309" style={{marginRight:8}}/>
+                  <Feather name="shield" size={16} color="#B45309" style={{ marginRight: 8 }} />
                   <Text style={styles.ackWarningText}>
-                    By confirming, you accept <Text style={{fontWeight:'bold'}}>full responsibility</Text> for this package's safety until delivery.
+                    By confirming, you accept <Text style={{ fontWeight: 'bold' }}>full responsibility</Text> for this package's safety until delivery.
                   </Text>
                 </View>
                 <View style={styles.ackChecklist}>
-                  {['Package is sealed & undamaged','Correct item verified','Customer details match order'].map((item,i) => (
+                  {['Package is sealed & undamaged', 'Correct item verified', 'Customer details match order'].map((item, i) => (
                     <View key={i} style={styles.ackCheckRow}>
-                      <View style={styles.ackCheckDot}><Feather name="check" size={12} color="#16A34A"/></View>
+                      <View style={styles.ackCheckDot}><Feather name="check" size={12} color="#16A34A" /></View>
                       <Text style={styles.ackCheckText}>{item}</Text>
                     </View>
                   ))}
@@ -806,26 +806,26 @@ export default function OrdersScreen() {
                 >
                   {packagePhoto ? (
                     <View style={styles.photoPreviewWrapper}>
-                      <Image source={{uri:packagePhoto}} style={styles.photoPreviewImage} resizeMode="cover"/>
+                      <Image source={{ uri: packagePhoto }} style={styles.photoPreviewImage} resizeMode="cover" />
                       <View style={styles.photoPreviewBadge}>
-                        <Feather name="check-circle" size={13} color="#10B981"/>
+                        <Feather name="check-circle" size={13} color="#10B981" />
                         <Text style={styles.photoPreviewBadgeText}>Photo Captured</Text>
                       </View>
                       <TouchableOpacity style={styles.retakeBtn} onPress={() => { setPackagePhoto(null); setTimeout(handleOpenCamera, 150); }}>
-                        <Feather name="camera" size={13} color="#FFF"/>
+                        <Feather name="camera" size={13} color="#FFF" />
                         <Text style={styles.retakeBtnText}>Retake</Text>
                       </TouchableOpacity>
                     </View>
                   ) : (
                     <View style={styles.photoUploadInner}>
-                      <View style={styles.cameraIconCircle}><Feather name="camera" size={28} color="#0284C7"/></View>
+                      <View style={styles.cameraIconCircle}><Feather name="camera" size={28} color="#0284C7" /></View>
                       <Text style={styles.photoUploadTitle}>Take Package Photo</Text>
                       <Text style={styles.photoUploadSubtitle}>Required before pickup confirmation</Text>
                     </View>
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleConfirmAck} style={[styles.confirmAckBtn, !packagePhoto && {backgroundColor:'#CBD5E1'}]} disabled={!packagePhoto}>
-                  <Feather name="check-circle" size={20} color="#FFF"/>
+                <TouchableOpacity onPress={handleConfirmAck} style={[styles.confirmAckBtn, !packagePhoto && { backgroundColor: '#CBD5E1' }]} disabled={!packagePhoto}>
+                  <Feather name="check-circle" size={20} color="#FFF" />
                   <Text style={styles.confirmAckText}>Confirm Pickup</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsAckModalOpen(false)} style={styles.cancelAckBtn}>
@@ -839,19 +839,19 @@ export default function OrdersScreen() {
           <Modal transparent visible={isCancelModalOpen} animationType="fade">
             <View style={styles.modalOverlay}>
               <View style={styles.cancelModalContent}>
-                <Text style={styles.cancelModalTitle}><Feather name="alert-circle" size={20}/> Cancel Order</Text>
+                <Text style={styles.cancelModalTitle}><Feather name="alert-circle" size={20} /> Cancel Order</Text>
                 <Text style={styles.cancelModalSub}>Select a valid reason for cancelling this trip.</Text>
                 <ScrollView style={styles.reasonList}>
-                  {cancelReasonsList.map((reason,idx) => (
-                    <TouchableOpacity key={idx} style={[styles.reasonRow, cancelReason===reason&&styles.reasonRowActive]} onPress={() => setCancelReason(reason)}>
-                      <View style={[styles.radioOuter, cancelReason===reason&&styles.radioOuterActive]}>
-                        {cancelReason===reason && <View style={styles.radioInner}/>}
+                  {cancelReasonsList.map((reason, idx) => (
+                    <TouchableOpacity key={idx} style={[styles.reasonRow, cancelReason === reason && styles.reasonRowActive]} onPress={() => setCancelReason(reason)}>
+                      <View style={[styles.radioOuter, cancelReason === reason && styles.radioOuterActive]}>
+                        {cancelReason === reason && <View style={styles.radioInner} />}
                       </View>
-                      <Text style={[styles.reasonText, cancelReason===reason&&styles.reasonTextActive]}>{reason}</Text>
+                      <Text style={[styles.reasonText, cancelReason === reason && styles.reasonTextActive]}>{reason}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
-                <TouchableOpacity onPress={confirmCancelTrip} disabled={!cancelReason} style={[styles.confirmCancelBtn, !cancelReason&&{opacity:0.5}]}>
+                <TouchableOpacity onPress={confirmCancelTrip} disabled={!cancelReason} style={[styles.confirmCancelBtn, !cancelReason && { opacity: 0.5 }]}>
                   <Text style={styles.confirmCancelText}>Confirm Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setIsCancelModalOpen(false)} style={styles.backBtn}>
@@ -861,7 +861,7 @@ export default function OrdersScreen() {
             </View>
           </Modal>
 
-          <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onCallCustomer={() => Alert.alert('Calling...','+91 9876543210')}/>
+          <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onCallCustomer={() => Alert.alert('Calling...', '+91 9876543210')} />
         </View>
       </Modal>
     </SafeAreaView>
@@ -872,142 +872,142 @@ export default function OrdersScreen() {
 // STYLES — identical to original
 // ═══════════════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container:{flex:1,backgroundColor:'#FFF'},
-  scrollPad:{padding:16,paddingBottom:60},
-  rowBetween:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start'},
-  tabContainer:{padding:16,paddingTop:8},
-  tabBg:{flexDirection:'row',backgroundColor:'#F1F5F9',borderRadius:16,padding:4},
-  tabBtn:{flex:1,paddingVertical:12,borderRadius:12,alignItems:'center'},
-  tabBtnActive:{backgroundColor:'#FFF',shadowColor:'#000',shadowOpacity:0.1,shadowRadius:2,elevation:2},
-  tabText:{fontSize:14,fontWeight:'bold',color:'#64748B'},
-  tabTextActive:{color:'#0284C7'},
-  sectionHeader:{fontSize:12,fontWeight:'900',color:'#94A3B8',letterSpacing:1,marginBottom:12,flexDirection:'row',alignItems:'center'},
-  dotPulse:{width:8,height:8,borderRadius:4,backgroundColor:'#0284C7',marginRight:8},
-  orderCard:{backgroundColor:'#FFF',borderRadius:24,padding:20,borderWidth:1,borderColor:'#F1F5F9',shadowColor:'#000',shadowOffset:{width:0,height:2},shadowOpacity:0.05,shadowRadius:4,elevation:2,marginBottom:16},
-  vehicleBadge:{backgroundColor:'#EFF6FF',alignSelf:'flex-start',paddingHorizontal:8,paddingVertical:4,borderRadius:6,marginBottom:8},
-  vehicleBadgeText:{color:'#0284C7',fontSize:10,fontWeight:'900',textTransform:'uppercase'},
-  orderTitle:{fontSize:18,fontWeight:'bold',color:'#0F172A'},
-  orderPayout:{fontSize:24,fontWeight:'900',color:'#0284C7'},
-  orderDist:{fontSize:12,fontWeight:'bold',color:'#94A3B8',marginTop:4},
-  addressRow:{flexDirection:'row',alignItems:'center',marginTop:16,marginBottom:20},
-  addressText:{fontSize:14,color:'#475569',flex:1},
-  actionRow:{flexDirection:'row',gap:12},
-  ignoreBtn:{flex:1,backgroundColor:'#F8FAFC',paddingVertical:14,borderRadius:12,alignItems:'center'},
-  ignoreText:{color:'#64748B',fontWeight:'bold',fontSize:16},
-  acceptBtn:{flex:1,backgroundColor:'#0284C7',paddingVertical:14,borderRadius:12,alignItems:'center'},
-  acceptText:{color:'#FFF',fontWeight:'bold',fontSize:16},
-  historyFiltersRow:{flexDirection:'row',marginBottom:8},
-  filterPill:{paddingHorizontal:20,paddingVertical:10,borderRadius:20,marginRight:8,borderWidth:1},
-  filterPillActive:{backgroundColor:'#0F172A',borderColor:'#0F172A'},
-  filterPillInactive:{backgroundColor:'#FFF',borderColor:'#E2E8F0'},
-  filterText:{fontWeight:'bold',fontSize:14},
-  filterTextActive:{color:'#FFF'},
-  filterTextInactive:{color:'#64748B'},
-  reasonBox:{backgroundColor:'#FEF2F2',padding:8,borderRadius:8,marginTop:12},
-  reasonTextSmall:{color:'#EF4444',fontSize:12,fontWeight:'600'},
-  historyFooter:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginTop:16,paddingTop:16,borderTopWidth:1,borderTopColor:'#F1F5F9'},
-  historyDate:{fontSize:12,fontWeight:'bold',color:'#94A3B8'},
-  statusBadge:{paddingHorizontal:10,paddingVertical:4,borderRadius:6},
-  statusGreen:{backgroundColor:'#DCFCE7'},
-  statusRed:{backgroundColor:'#FEE2E2'},
-  statusGray:{backgroundColor:'#F1F5F9'},
-  statusText:{fontSize:10,fontWeight:'900',textTransform:'uppercase',letterSpacing:0.5},
-  emptyState:{alignItems:'center',justifyContent:'center',paddingVertical:60},
-  emptyTitle:{fontSize:18,fontWeight:'bold',color:'#475569',marginTop:16},
-  emptySub:{fontSize:14,color:'#94A3B8',marginTop:8},
-  modalOverlay:{flex:1,backgroundColor:'rgba(0,0,0,0.6)',justifyContent:'center',alignItems:'center'},
-  navModalContent:{width:'90%',backgroundColor:'#FFF',borderRadius:32,padding:24,alignItems:'center'},
-  successIconBox:{width:64,height:64,borderRadius:32,backgroundColor:'#22C55E',justifyContent:'center',alignItems:'center',marginBottom:16},
-  navModalTitle:{fontSize:24,fontWeight:'900',color:'#0F172A'},
-  navModalSub:{fontSize:14,color:'#64748B',marginBottom:24},
-  routeBox:{width:'100%',backgroundColor:'#F8FAFC',borderRadius:20,padding:16,marginBottom:24,borderWidth:1,borderColor:'#F1F5F9'},
-  routeRow:{flexDirection:'row',alignItems:'flex-start'},
-  routeDot:{width:32,height:32,borderRadius:16,marginTop:2},
-  routeLabel:{fontSize:10,fontWeight:'bold',color:'#94A3B8',marginBottom:4},
-  routeAddress:{fontSize:14,fontWeight:'600',color:'#0F172A'},
-  routeDivider:{borderLeftWidth:2,borderStyle:'dashed',borderColor:'#CBD5E1',height:20,marginLeft:15,marginVertical:4},
-  goBtn:{width:'100%',backgroundColor:'#0284C7',paddingVertical:16,borderRadius:16,flexDirection:'row',justifyContent:'center',alignItems:'center',gap:8},
-  goBtnText:{color:'#FFF',fontSize:16,fontWeight:'bold'},
-  activeTripContainer:{flex:1,backgroundColor:'#F8FAFC'},
-  mapContainer:{flex:1,position:'relative',overflow:'hidden'},
-  mapPinContainer:{position:'absolute',top:'50%',left:'50%',transform:[{translateX:-20},{translateY:-40}],alignItems:'center'},
-  mapPulse:{position:'absolute',width:60,height:60,borderRadius:30,backgroundColor:'rgba(2,132,199,0.3)',top:-10,left:-10},
-  mapPin:{width:40,height:40,borderRadius:20,backgroundColor:'#0284C7',justifyContent:'center',alignItems:'center'},
-  mapTopBar:{position:'absolute',top:50,left:16,right:16,flexDirection:'row',justifyContent:'space-between'},
-  mapBackBtn:{width:48,height:48,backgroundColor:'#FFF',borderRadius:24,justifyContent:'center',alignItems:'center',shadowColor:'#000',shadowOpacity:0.1,shadowRadius:5},
-  liveGpsBadge:{backgroundColor:'#FFF',paddingHorizontal:16,borderRadius:24,flexDirection:'row',alignItems:'center',shadowColor:'#000',shadowOpacity:0.1,shadowRadius:5},
-  liveGpsDot:{width:8,height:8,borderRadius:4,backgroundColor:'#22C55E',marginRight:8},
-  liveGpsText:{fontWeight:'bold',fontSize:14,color:'#0F172A'},
-  bottomSheet:{backgroundColor:'#FFF',borderTopLeftRadius:32,borderTopRightRadius:32,padding:24,shadowColor:'#000',shadowOffset:{width:0,height:-10},shadowOpacity:0.1,shadowRadius:20,elevation:20},
-  sheetHandle:{width:40,height:6,backgroundColor:'#E2E8F0',borderRadius:3,alignSelf:'center',marginBottom:20},
-  sheetSubtitle:{fontSize:10,fontWeight:'900',color:'#0284C7',letterSpacing:1,marginBottom:4},
-  sheetTitle:{fontSize:24,fontWeight:'bold',color:'#0F172A',marginBottom:4},
-  sheetAddress:{fontSize:14,color:'#64748B',marginBottom:20},
-  sheetActionRow:{flexDirection:'row',gap:12,marginBottom:16},
-  sheetTopRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:8},
-  stepBadge:{backgroundColor:'#EFF6FF',paddingHorizontal:10,paddingVertical:4,borderRadius:20},
-  stepBadgeText:{fontSize:10,fontWeight:'900',color:'#0284C7',letterSpacing:.5},
-  vTypePill:{flexDirection:'row',alignItems:'center',backgroundColor:'#F5F3FF',paddingHorizontal:10,paddingVertical:4,borderRadius:20},
-  vTypeText:{fontSize:11,fontWeight:'800',color:'#7C3AED'},
-  payoutPill:{flexDirection:'row',alignItems:'center',backgroundColor:'#EFF6FF',paddingHorizontal:10,paddingVertical:4,borderRadius:20,gap:4},
-  payoutPillText:{fontSize:11,fontWeight:'800',color:'#0284C7'},
-  circleBtn:{width:52,height:52,borderRadius:16,justifyContent:'center',alignItems:'center'},
-  quickStrip:{flexDirection:'row',gap:8,marginBottom:14},
-  quickChip:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,backgroundColor:'#F8FAFC',borderWidth:1.5,borderColor:'#E2E8F0',paddingVertical:10,borderRadius:14},
-  quickChipText:{fontSize:11,fontWeight:'700',color:'#334155'},
-  ackHeader:{flexDirection:'row',alignItems:'center',marginBottom:16},
-  ackModalSub:{fontSize:12,fontWeight:'600',color:'#64748B'},
-  ackChecklist:{backgroundColor:'#F8FAFC',borderRadius:16,padding:14,marginBottom:16,gap:10},
-  ackCheckRow:{flexDirection:'row',alignItems:'center',gap:10},
-  ackCheckDot:{width:22,height:22,borderRadius:11,backgroundColor:'#DCFCE7',justifyContent:'center',alignItems:'center'},
-  ackCheckText:{fontSize:13,fontWeight:'600',color:'#334155'},
-  navBtn:{flex:1,backgroundColor:'#2563EB',paddingVertical:16,borderRadius:16,flexDirection:'row',justifyContent:'center',alignItems:'center',gap:8},
-  navBtnText:{color:'#FFF',fontWeight:'bold',fontSize:16},
-  arriveBtn:{backgroundColor:'#F0F9FF',borderWidth:2,borderColor:'#0284C7',paddingVertical:16,borderRadius:16,flexDirection:'row',justifyContent:'center',alignItems:'center',gap:12},
-  arriveBtnText:{color:'#0284C7',fontSize:18,fontWeight:'900'},
-  sheetCancelBtn:{marginTop:16,alignItems:'center',paddingVertical:12},
-  sheetCancelText:{color:'#EF4444',fontWeight:'bold',fontSize:16},
-  otpSection:{alignItems:'center'},
-  otpIconBox:{width:64,height:64,borderRadius:32,backgroundColor:'#F0F9FF',justifyContent:'center',alignItems:'center',marginBottom:16},
-  otpTitle:{fontSize:24,fontWeight:'bold',color:'#0F172A',marginBottom:8},
-  otpSub:{fontSize:14,color:'#64748B',marginBottom:24},
-  otpInput:{width:200,height:64,backgroundColor:'#F8FAFC',borderWidth:2,borderColor:'#E2E8F0',borderRadius:16,fontSize:32,fontWeight:'bold',letterSpacing:8,textAlign:'center',color:'#0F172A',marginBottom:24},
-  verifyBtn:{width:'100%',backgroundColor:'#16A34A',paddingVertical:16,borderRadius:16,alignItems:'center'},
-  verifyBtnText:{color:'#FFF',fontSize:18,fontWeight:'900'},
-  ackModalContent:{width:'92%',backgroundColor:'#FFF',borderRadius:32,padding:24,alignItems:'stretch'},
-  ackIconBox:{width:52,height:52,borderRadius:16,backgroundColor:'#E0F2FE',justifyContent:'center',alignItems:'center'},
-  ackModalTitle:{fontSize:18,fontWeight:'900',color:'#0F172A'},
-  ackWarningBox:{flexDirection:'row',alignItems:'flex-start',backgroundColor:'#FEF3C7',borderColor:'#FDE68A',borderWidth:1,borderRadius:16,padding:14,marginBottom:14},
-  ackWarningText:{fontSize:13,color:'#92400E',lineHeight:20,flex:1},
-  photoUploadBox:{width:'100%',borderWidth:2,borderColor:'#CBD5E1',borderStyle:'dashed',borderRadius:16,overflow:'hidden',marginBottom:24,backgroundColor:'#F8FAFC',minHeight:130},
-  photoUploadBoxSuccess:{borderColor:'#10B981',borderStyle:'solid',backgroundColor:'#ECFDF5'},
-  photoUploadInner:{alignItems:'center',justifyContent:'center',paddingVertical:24,paddingHorizontal:16},
-  cameraIconCircle:{width:56,height:56,borderRadius:28,backgroundColor:'#E0F2FE',justifyContent:'center',alignItems:'center',marginBottom:10},
-  photoUploadTitle:{fontSize:15,fontWeight:'700',color:'#0F172A',marginBottom:4},
-  photoUploadSubtitle:{fontSize:13,color:'#94A3B8'},
-  photoPreviewWrapper:{width:'100%',height:180,position:'relative'},
-  photoPreviewImage:{width:'100%',height:'100%'},
-  photoPreviewBadge:{position:'absolute',top:10,left:10,flexDirection:'row',alignItems:'center',backgroundColor:'#FFF',paddingHorizontal:10,paddingVertical:4,borderRadius:20,gap:4,shadowColor:'#000',shadowOpacity:0.1,shadowRadius:4},
-  photoPreviewBadgeText:{fontSize:12,fontWeight:'700',color:'#10B981'},
-  retakeBtn:{position:'absolute',bottom:10,right:10,flexDirection:'row',alignItems:'center',backgroundColor:'rgba(0,0,0,0.55)',paddingHorizontal:12,paddingVertical:6,borderRadius:20,gap:5},
-  retakeBtnText:{color:'#FFF',fontSize:12,fontWeight:'700'},
-  confirmAckBtn:{width:'100%',backgroundColor:'#0284C7',paddingVertical:16,borderRadius:16,flexDirection:'row',justifyContent:'center',alignItems:'center',gap:8,marginBottom:12},
-  confirmAckText:{color:'#FFF',fontWeight:'bold',fontSize:16},
-  cancelAckBtn:{paddingVertical:12},
-  cancelAckText:{color:'#64748B',fontWeight:'bold',fontSize:14},
-  cancelModalContent:{width:'90%',backgroundColor:'#FFF',borderRadius:32,padding:24},
-  cancelModalTitle:{fontSize:20,fontWeight:'bold',color:'#EF4444',textAlign:'center',marginBottom:8},
-  cancelModalSub:{fontSize:14,color:'#64748B',textAlign:'center',marginBottom:24},
-  reasonList:{maxHeight:300,marginBottom:24},
-  reasonRow:{flexDirection:'row',alignItems:'center',padding:16,borderRadius:16,borderWidth:2,borderColor:'#F1F5F9',marginBottom:8},
-  reasonRowActive:{borderColor:'#EF4444',backgroundColor:'#FEF2F2'},
-  radioOuter:{width:24,height:24,borderRadius:12,borderWidth:2,borderColor:'#CBD5E1',justifyContent:'center',alignItems:'center',marginRight:12},
-  radioOuterActive:{borderColor:'#EF4444'},
-  radioInner:{width:12,height:12,borderRadius:6,backgroundColor:'#EF4444'},
-  reasonText:{fontSize:14,fontWeight:'600',color:'#475569'},
-  reasonTextActive:{color:'#B91C1C'},
-  confirmCancelBtn:{backgroundColor:'#EF4444',paddingVertical:16,borderRadius:16,alignItems:'center',marginBottom:12},
-  confirmCancelText:{color:'#FFF',fontWeight:'bold',fontSize:16},
-  backBtn:{backgroundColor:'#F1F5F9',paddingVertical:16,borderRadius:16,alignItems:'center'},
-  backBtnText:{color:'#475569',fontWeight:'bold',fontSize:16},
+  container: { flex: 1, backgroundColor: '#FFF' },
+  scrollPad: { padding: 16, paddingBottom: 60 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  tabContainer: { padding: 16, paddingTop: 8 },
+  tabBg: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 16, padding: 4 },
+  tabBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  tabBtnActive: { backgroundColor: '#FFF', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  tabText: { fontSize: 14, fontWeight: 'bold', color: '#64748B' },
+  tabTextActive: { color: '#0284C7' },
+  sectionHeader: { fontSize: 12, fontWeight: '900', color: '#94A3B8', letterSpacing: 1, marginBottom: 12, flexDirection: 'row', alignItems: 'center' },
+  dotPulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0284C7', marginRight: 8 },
+  orderCard: { backgroundColor: '#FFF', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, marginBottom: 16 },
+  vehicleBadge: { backgroundColor: '#EFF6FF', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginBottom: 8 },
+  vehicleBadgeText: { color: '#0284C7', fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
+  orderTitle: { fontSize: 18, fontWeight: 'bold', color: '#0F172A' },
+  orderPayout: { fontSize: 24, fontWeight: '900', color: '#0284C7' },
+  orderDist: { fontSize: 12, fontWeight: 'bold', color: '#94A3B8', marginTop: 4 },
+  addressRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 20 },
+  addressText: { fontSize: 14, color: '#475569', flex: 1 },
+  actionRow: { flexDirection: 'row', gap: 12 },
+  ignoreBtn: { flex: 1, backgroundColor: '#F8FAFC', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  ignoreText: { color: '#64748B', fontWeight: 'bold', fontSize: 16 },
+  acceptBtn: { flex: 1, backgroundColor: '#0284C7', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  acceptText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  historyFiltersRow: { flexDirection: 'row', marginBottom: 8 },
+  filterPill: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginRight: 8, borderWidth: 1 },
+  filterPillActive: { backgroundColor: '#0F172A', borderColor: '#0F172A' },
+  filterPillInactive: { backgroundColor: '#FFF', borderColor: '#E2E8F0' },
+  filterText: { fontWeight: 'bold', fontSize: 14 },
+  filterTextActive: { color: '#FFF' },
+  filterTextInactive: { color: '#64748B' },
+  reasonBox: { backgroundColor: '#FEF2F2', padding: 8, borderRadius: 8, marginTop: 12 },
+  reasonTextSmall: { color: '#EF4444', fontSize: 12, fontWeight: '600' },
+  historyFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  historyDate: { fontSize: 12, fontWeight: 'bold', color: '#94A3B8' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  statusGreen: { backgroundColor: '#DCFCE7' },
+  statusRed: { backgroundColor: '#FEE2E2' },
+  statusGray: { backgroundColor: '#F1F5F9' },
+  statusText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#475569', marginTop: 16 },
+  emptySub: { fontSize: 14, color: '#94A3B8', marginTop: 8 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+  navModalContent: { width: '90%', backgroundColor: '#FFF', borderRadius: 32, padding: 24, alignItems: 'center' },
+  successIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#22C55E', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  navModalTitle: { fontSize: 24, fontWeight: '900', color: '#0F172A' },
+  navModalSub: { fontSize: 14, color: '#64748B', marginBottom: 24 },
+  routeBox: { width: '100%', backgroundColor: '#F8FAFC', borderRadius: 20, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: '#F1F5F9' },
+  routeRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  routeDot: { width: 32, height: 32, borderRadius: 16, marginTop: 2 },
+  routeLabel: { fontSize: 10, fontWeight: 'bold', color: '#94A3B8', marginBottom: 4 },
+  routeAddress: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  routeDivider: { borderLeftWidth: 2, borderStyle: 'dashed', borderColor: '#CBD5E1', height: 20, marginLeft: 15, marginVertical: 4 },
+  goBtn: { width: '100%', backgroundColor: '#0284C7', paddingVertical: 16, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  goBtnText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
+  activeTripContainer: { flex: 1, backgroundColor: '#F8FAFC' },
+  mapContainer: { flex: 1, position: 'relative', overflow: 'hidden' },
+  mapPinContainer: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -20 }, { translateY: -40 }], alignItems: 'center' },
+  mapPulse: { position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(2,132,199,0.3)', top: -10, left: -10 },
+  mapPin: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#0284C7', justifyContent: 'center', alignItems: 'center' },
+  mapTopBar: { position: 'absolute', top: 50, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
+  mapBackBtn: { width: 48, height: 48, backgroundColor: '#FFF', borderRadius: 24, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
+  liveGpsBadge: { backgroundColor: '#FFF', paddingHorizontal: 16, borderRadius: 24, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 },
+  liveGpsDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E', marginRight: 8 },
+  liveGpsText: { fontWeight: 'bold', fontSize: 14, color: '#0F172A' },
+  bottomSheet: { backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 20 },
+  sheetHandle: { width: 40, height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, alignSelf: 'center', marginBottom: 20 },
+  sheetSubtitle: { fontSize: 10, fontWeight: '900', color: '#0284C7', letterSpacing: 1, marginBottom: 4 },
+  sheetTitle: { fontSize: 24, fontWeight: 'bold', color: '#0F172A', marginBottom: 4 },
+  sheetAddress: { fontSize: 14, color: '#64748B', marginBottom: 20 },
+  sheetActionRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  sheetTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  stepBadge: { backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  stepBadgeText: { fontSize: 10, fontWeight: '900', color: '#0284C7', letterSpacing: .5 },
+  vTypePill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F3FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  vTypeText: { fontSize: 11, fontWeight: '800', color: '#7C3AED' },
+  payoutPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, gap: 4 },
+  payoutPillText: { fontSize: 11, fontWeight: '800', color: '#0284C7' },
+  circleBtn: { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  quickStrip: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  quickChip: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', paddingVertical: 10, borderRadius: 14 },
+  quickChipText: { fontSize: 11, fontWeight: '700', color: '#334155' },
+  ackHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  ackModalSub: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  ackChecklist: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 14, marginBottom: 16, gap: 10 },
+  ackCheckRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ackCheckDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#DCFCE7', justifyContent: 'center', alignItems: 'center' },
+  ackCheckText: { fontSize: 13, fontWeight: '600', color: '#334155' },
+  navBtn: { flex: 1, backgroundColor: '#2563EB', paddingVertical: 16, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  navBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  arriveBtn: { backgroundColor: '#F0F9FF', borderWidth: 2, borderColor: '#0284C7', paddingVertical: 16, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 },
+  arriveBtnText: { color: '#0284C7', fontSize: 18, fontWeight: '900' },
+  sheetCancelBtn: { marginTop: 16, alignItems: 'center', paddingVertical: 12 },
+  sheetCancelText: { color: '#EF4444', fontWeight: 'bold', fontSize: 16 },
+  otpSection: { alignItems: 'center' },
+  otpIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F0F9FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  otpTitle: { fontSize: 24, fontWeight: 'bold', color: '#0F172A', marginBottom: 8 },
+  otpSub: { fontSize: 14, color: '#64748B', marginBottom: 24 },
+  otpInput: { width: 200, height: 64, backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#E2E8F0', borderRadius: 16, fontSize: 32, fontWeight: 'bold', letterSpacing: 8, textAlign: 'center', color: '#0F172A', marginBottom: 24 },
+  verifyBtn: { width: '100%', backgroundColor: '#16A34A', paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
+  verifyBtnText: { color: '#FFF', fontSize: 18, fontWeight: '900' },
+  ackModalContent: { width: '92%', backgroundColor: '#FFF', borderRadius: 32, padding: 24, alignItems: 'stretch' },
+  ackIconBox: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#E0F2FE', justifyContent: 'center', alignItems: 'center' },
+  ackModalTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A' },
+  ackWarningBox: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FEF3C7', borderColor: '#FDE68A', borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 14 },
+  ackWarningText: { fontSize: 13, color: '#92400E', lineHeight: 20, flex: 1 },
+  photoUploadBox: { width: '100%', borderWidth: 2, borderColor: '#CBD5E1', borderStyle: 'dashed', borderRadius: 16, overflow: 'hidden', marginBottom: 24, backgroundColor: '#F8FAFC', minHeight: 130 },
+  photoUploadBoxSuccess: { borderColor: '#10B981', borderStyle: 'solid', backgroundColor: '#ECFDF5' },
+  photoUploadInner: { alignItems: 'center', justifyContent: 'center', paddingVertical: 24, paddingHorizontal: 16 },
+  cameraIconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#E0F2FE', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  photoUploadTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
+  photoUploadSubtitle: { fontSize: 13, color: '#94A3B8' },
+  photoPreviewWrapper: { width: '100%', height: 180, position: 'relative' },
+  photoPreviewImage: { width: '100%', height: '100%' },
+  photoPreviewBadge: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, gap: 4, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 },
+  photoPreviewBadgeText: { fontSize: 12, fontWeight: '700', color: '#10B981' },
+  retakeBtn: { position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 5 },
+  retakeBtnText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  confirmAckBtn: { width: '100%', backgroundColor: '#0284C7', paddingVertical: 16, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 12 },
+  confirmAckText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  cancelAckBtn: { paddingVertical: 12 },
+  cancelAckText: { color: '#64748B', fontWeight: 'bold', fontSize: 14 },
+  cancelModalContent: { width: '90%', backgroundColor: '#FFF', borderRadius: 32, padding: 24 },
+  cancelModalTitle: { fontSize: 20, fontWeight: 'bold', color: '#EF4444', textAlign: 'center', marginBottom: 8 },
+  cancelModalSub: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 24 },
+  reasonList: { maxHeight: 300, marginBottom: 24 },
+  reasonRow: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, borderWidth: 2, borderColor: '#F1F5F9', marginBottom: 8 },
+  reasonRowActive: { borderColor: '#EF4444', backgroundColor: '#FEF2F2' },
+  radioOuter: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#CBD5E1', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  radioOuterActive: { borderColor: '#EF4444' },
+  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444' },
+  reasonText: { fontSize: 14, fontWeight: '600', color: '#475569' },
+  reasonTextActive: { color: '#B91C1C' },
+  confirmCancelBtn: { backgroundColor: '#EF4444', paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginBottom: 12 },
+  confirmCancelText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  backBtn: { backgroundColor: '#F1F5F9', paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
+  backBtnText: { color: '#475569', fontWeight: 'bold', fontSize: 16 },
 });

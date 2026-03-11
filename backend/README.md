@@ -4,15 +4,15 @@
 ```
 qc-driver-backend/     ← Node.js + Fastify backend (deploy to Render)
 MobileDriver-main/     ← Expo React Native app (deploy to Vercel/EAS)
-sql/                   ← Supabase migration SQL
+sql/                   ← PostgreSQL migration SQL
 ```
 
 ---
 
-## STEP 1 — Supabase Setup
+## STEP 1 — Database Setup
 
 ### 1a. Create Storage Buckets
-Go to **Supabase Dashboard → Storage** and create these 4 buckets:
+Setup your file storage provider (like AWS S3 or Cloudinary) and create these 4 buckets/folders:
 
 | Bucket Name         | Public? |
 |---------------------|---------|
@@ -22,7 +22,7 @@ Go to **Supabase Dashboard → Storage** and create these 4 buckets:
 | `promo-images`      | ✅ Yes  |
 
 ### 1b. Run the SQL Migration
-Go to **Supabase Dashboard → SQL Editor** and run the file:
+Run the following SQL file in your PostgreSQL database:
 ```
 sql/001_missing_tables.sql
 ```
@@ -30,7 +30,7 @@ sql/001_missing_tables.sql
 This creates 7 missing tables and enables Realtime on all key tables.
 
 ### 1c. Enable Realtime
-Go to **Supabase Dashboard → Database → Replication** and enable the following tables:
+Ensure your PostgreSQL database supports LISTEN/NOTIFY for the following tables:
 - `orders`
 - `delivery_trips`
 - `driver_profiles`
@@ -54,9 +54,7 @@ npm install
 cp .env.example .env
 
 # Fill in your values in .env:
-#   SUPABASE_URL=https://xxx.supabase.co
-#   SUPABASE_ANON_KEY=...
-#   SUPABASE_SERVICE_ROLE_KEY=...
+#   PG_CONNECTION_STRING=postgres://user:pass@host:5432/db
 #   JWT_SECRET=any-long-random-string-min-32-chars
 
 # Start dev server
@@ -80,9 +78,7 @@ Health check: `http://localhost:3000/health`
    ```
    NODE_ENV=production
    PORT=3000
-   SUPABASE_URL=your-url
-   SUPABASE_ANON_KEY=your-key
-   SUPABASE_SERVICE_ROLE_KEY=your-service-key
+   PG_CONNECTION_STRING=your-pg-url
    JWT_SECRET=your-secret
    OTP_PROVIDER=mock
    ```

@@ -30,10 +30,10 @@ interface CustomRange {
 // MINI CALENDAR
 // ═══════════════════════════════════════════════════════════════════════════
 const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ];
-const DAYS = ['S','M','T','W','T','F','S'];
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 function MiniCalendar({
   selectedDate,
@@ -179,9 +179,9 @@ function DatePickerModal({
 
   const title =
     timeframe === 'daily' ? 'Select a Date' :
-    timeframe === 'weekly' ? 'Select Week (pick any day)' :
-    timeframe === 'monthly' ? 'Select Month (pick any day)' :
-    'Select Custom Range';
+      timeframe === 'weekly' ? 'Select Week (pick any day)' :
+        timeframe === 'monthly' ? 'Select Month (pick any day)' :
+          'Select Custom Range';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -258,18 +258,18 @@ const getWeekRange = (dateKey: string) => {
   const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
   const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
   const toK = (dt: Date) =>
-    `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   return { start: toK(mon), end: toK(sun) };
 };
 
 const getMonthLabel = (dateKey: string) => {
   const [y, m] = dateKey.split('-');
-  return `${MONTHS[parseInt(m)-1]} ${y}`;
+  return `${MONTHS[parseInt(m) - 1]} ${y}`;
 };
 
 const todayKey = () => {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -296,9 +296,9 @@ export default function EarningsScreen() {
     try {
       const result = await EarningsAPI.get(
         timeframe,
-        timeframe !== 'custom' ? queryDate : null,
-        timeframe === 'custom' ? queryStartDate : null,
-        timeframe === 'custom' ? queryEndDate : null
+        (timeframe !== 'custom' ? queryDate : null) as any,
+        (timeframe === 'custom' ? queryStartDate : null) as any,
+        (timeframe === 'custom' ? queryEndDate : null) as any
       );
       if (result.success && result.data) {
         const formatted: Trip[] = (result.data.trips || []).map((t: any) => ({

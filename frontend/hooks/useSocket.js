@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { TokenStore, DriverStore } from '../services/api';
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 'https://qc-driver-backend.onrender.com';
+const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dechta-driver.onrender.com';
 
 export function useSocket({ onNewOrder, onOrderUpdate, onNotification } = {}) {
   const socketRef = useRef(null);

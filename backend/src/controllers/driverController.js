@@ -1,6 +1,6 @@
 // src/controllers/driverController.js
-const { supabaseAdmin } = require('../config/supabase');
-const { uploadFile } = require('../services/uploadService');
+const { query }           = require('../config/db');
+const { uploadFile }      = require('../services/uploadService');
 const { pushNotification } = require('../services/socketService');
 
 // ──────────────────────────────────────────────────────────────
@@ -9,95 +9,61 @@ const { pushNotification } = require('../services/socketService');
 async function getProfile(request, reply) {
   const driverId = request.driver.id;
 
-  const { data: profile, error } = await supabaseAdmin
-    .from('driver_profiles')
-    .select('*')
-    .eq('id', driverId)
-    .single();
+  const [profileRes, statsRes, vehicleRes, bankRes, docsRes, walletRes] = await Promise.all([
+    query(`SELECT * FROM driver_profiles WHERE id = $1`, [driverId]),
+    query(`SELECT * FROM driver_stats WHERE driver_id = $1`, [driverId]),
+    query(`SELECT * FROM driver_vehicles WHERE driver_id = $1 LIMIT 1`, [driverId]),
+    query(`SELECT * FROM driver_bank_accounts WHERE driver_id = $1 LIMIT 1`, [driverId]),
+    query(`SELECT * FROM driver_documentss WHERE driver_id = $1 LIMIT 1`, [driverId]),
+    query(`SELECT balance, outstanding_dues FROM driver_wallets WHERE driver_id = $1`, [driverId]),
+  ]);
 
-  if (error || !profile) {
+  if (!profileRes.rows.length) {
     return reply.code(404).send({ success: false, message: 'Profile not found' });
   }
-
-  // Fetch stats
-  const { data: stats } = await supabaseAdmin
-    .from('driver_stats')
-    .select('*')
-    .eq('driver_id', driverId)
-    .single();
-
-  // Fetch vehicle
-  const { data: vehicle } = await supabaseAdmin
-    .from('driver_vehicles')
-    .select('*')
-    .eq('driver_id', driverId)
-    .single();
-
-  // Fetch bank
-  const { data: bank } = await supabaseAdmin
-    .from('driver_bank_accounts')
-    .select('*')
-    .eq('driver_id', driverId)
-    .single();
-
-  // Fetch documents
-  const { data: docs } = await supabaseAdmin
-    .from('driver_documentss')
-    .select('*')
-    .eq('driver_id', driverId)
-    .single();
-
-  // Fetch wallet
-  const { data: wallet } = await supabaseAdmin
-    .from('driver_wallets')
-    .select('balance, outstanding_dues')
-    .eq('driver_id', driverId)
-    .single();
 
   return reply.send({
     success: true,
     data: {
-      profile,
-      stats: stats || {},
-      vehicle: vehicle || null,
-      bank: bank || null,
-      documents: docs || null,
-      wallet: wallet || { balance: 0, outstanding_dues: 0 },
+      profile:   profileRes.rows[0],
+      stats:     statsRes.rows[0]   || {},
+      vehicle:   vehicleRes.rows[0] || null,
+      bank:      bankRes.rows[0]    || null,
+      documents: docsRes.rows[0]    || null,
+      wallet:    walletRes.rows[0]  || { balance: 0, outstanding_dues: 0 },
     },
   });
 }
 
 // ──────────────────────────────────────────────────────────────
 // PUT /api/driver/profile
-// Update personal details
 // ──────────────────────────────────────────────────────────────
 async function updateProfile(request, reply) {
   const driverId = request.driver.id;
-  const {
-    fullName, dob, bloodGroup, tshirtSize,
-    preferredZone, emergencyContact,
-  } = request.body;
+  const { fullName, dob, bloodGroup, tshirtSize, preferredZone, emergencyContact } = request.body;
 
-  const updates = {};
-  if (fullName)       updates.full_name = fullName;
-  if (dob)            updates.dob = dob;
-  if (bloodGroup)     updates.blood_group = bloodGroup;
-  if (tshirtSize)     updates.tshirt_size = tshirtSize;
-  if (preferredZone)  updates.preferred_zone = preferredZone;
-  if (emergencyContact) updates.emergency_contact = emergencyContact;
+  const fields = [];
+  const values = [];
+  let idx = 1;
 
-  const { data, error } = await supabaseAdmin
-    .from('driver_profiles')
-    .update(updates)
-    .eq('id', driverId)
-    .select()
-    .single();
+  if (fullName)        { fields.push(`full_name = $${idx++}`);        values.push(fullName); }
+  if (dob)             { fields.push(`dob = $${idx++}`);              values.push(dob); }
+  if (bloodGroup)      { fields.push(`blood_group = $${idx++}`);      values.push(bloodGroup); }
+  if (tshirtSize)      { fields.push(`tshirt_size = $${idx++}`);      values.push(tshirtSize); }
+  if (preferredZone)   { fields.push(`preferred_zone = $${idx++}`);   values.push(preferredZone); }
+  if (emergencyContact){ fields.push(`emergency_contact = $${idx++}`);values.push(emergencyContact); }
 
-  if (error) {
-    return reply.code(500).send({ success: false, message: 'Failed to update profile' });
+  if (!fields.length) {
+    return reply.code(400).send({ success: false, message: 'No fields to update' });
   }
 
-  return reply.send({ success: true, data });
+  values.push(driverId);
+  const { rows } = await query(
+    `UPDATE driver_profiles SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`,
+    values
+  );
+
+  return reply.send({ success: true, data: rows[0] });
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -106,7 +72,6 @@ async function updateProfile(request, reply) {
 // ──────────────────────────────────────────────────────────────
 async function completeRegistration(request, reply) {
   const driverId = request.driver.id;
-
   const {
     fullName, dob, emergencyContact, bloodGroup, tshirtSize, preferredZone,
     vehicleType, specificModelId, vehicleModelName, vehicleWeight,
@@ -114,7 +79,6 @@ async function completeRegistration(request, reply) {
     accountHolder, bankAccount, ifscCode, referralCode,
   } = request.body;
 
-  // Validation
   if (!fullName || !vehicleType || !vehicleNumber || !bankAccount || !ifscCode || !accountHolder) {
     return reply.code(400).send({
       success: false,
@@ -124,97 +88,70 @@ async function completeRegistration(request, reply) {
 
   try {
     // 1. Update driver profile
-    await supabaseAdmin
-      .from('driver_profiles')
-      .update({
-        full_name: fullName,
-        dob,
-        emergency_contact: emergencyContact,
-        blood_group: bloodGroup,
-        tshirt_size: tshirtSize,
-        preferred_zone: preferredZone,
-      })
-      .eq('id', driverId);
+    await query(
+      `UPDATE driver_profiles
+       SET full_name=$1, dob=$2, emergency_contact=$3, blood_group=$4, tshirt_size=$5, preferred_zone=$6
+       WHERE id=$7`,
+      [fullName, dob || null, emergencyContact || null, bloodGroup || null, tshirtSize || null, preferredZone || null, driverId]
+    );
 
     // 2. Upsert vehicle
-    const vehicleData = {
-      driver_id: driverId,
-      vehicle_type: vehicleType,
-      model_id: specificModelId,
-      model_name: vehicleModelName,
-      weight_capacity: vehicleWeight,
-      dimensions: vehicleDimensions,
-      body_type: bodyType,
-      registration_number: vehicleNumber.toUpperCase(),
-      is_active: true,
-    };
-
-    const { error: vehError } = await supabaseAdmin
-      .from('driver_vehicles')
-      .upsert(vehicleData, { onConflict: 'driver_id' });
-
-    if (vehError && !vehError.message.includes('unique')) {
-      throw new Error(`Vehicle save failed: ${vehError.message}`);
-    }
+    await query(
+      `INSERT INTO driver_vehicles
+         (driver_id, vehicle_type, model_id, model_name, weight_capacity, dimensions, body_type, registration_number, is_active)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true)
+       ON CONFLICT (driver_id)
+       DO UPDATE SET
+         vehicle_type=$2, model_id=$3, model_name=$4, weight_capacity=$5,
+         dimensions=$6, body_type=$7, registration_number=$8, is_active=true`,
+      [driverId, vehicleType, specificModelId || null, vehicleModelName || null,
+       vehicleWeight || null, vehicleDimensions || null, bodyType || null,
+       vehicleNumber.toUpperCase()]
+    );
 
     // 3. Upsert bank account
-    await supabaseAdmin
-      .from('driver_bank_accounts')
-      .upsert(
-        {
-          driver_id: driverId,
-          account_holder_name: accountHolder,
-          account_number: bankAccount,
-          ifsc_code: ifscCode.toUpperCase(),
-          is_verified: false,
-        },
-        { onConflict: 'driver_id' }
-      );
+    await query(
+      `INSERT INTO driver_bank_accounts
+         (driver_id, account_holder_name, account_number, ifsc_code, is_verified)
+       VALUES ($1,$2,$3,$4,false)
+       ON CONFLICT (driver_id)
+       DO UPDATE SET account_holder_name=$2, account_number=$3, ifsc_code=$4`,
+      [driverId, accountHolder, bankAccount, ifscCode.toUpperCase()]
+    );
 
-    // 4. Handle referral code
+    // 4. Handle referral
     if (referralCode) {
-      const { data: referrer } = await supabaseAdmin
-        .from('driver_profiles')
-        .select('id')
-        .eq('referral_code', referralCode.toUpperCase())
-        .single();
-
-      if (referrer && referrer.id !== driverId) {
-        await supabaseAdmin
-          .from('driver_referrals')
-          .upsert({
-            referrer_id: referrer.id,
-            referred_id: driverId,
-            bonus_paid: false,
-          }, { onConflict: 'referrer_id,referred_id', ignoreDuplicates: true });
+      const { rows: referrer } = await query(
+        `SELECT id FROM driver_profiles WHERE referral_code = $1 AND id != $2`,
+        [referralCode.toUpperCase(), driverId]
+      );
+      if (referrer.length) {
+        await query(
+          `INSERT INTO driver_referrals (referrer_id, referred_id, bonus_paid)
+           VALUES ($1,$2,false)
+           ON CONFLICT (referrer_id, referred_id) DO NOTHING`,
+          [referrer[0].id, driverId]
+        );
       }
     }
 
-    // 5. Create empty documents record if not exists
-    const { data: existingDocs } = await supabaseAdmin
-      .from('driver_documentss')
-      .select('id')
-      .eq('driver_id', driverId)
-      .single();
+    // 5. Create documents record if missing
+    await query(
+      `INSERT INTO driver_documentss (driver_id, verification_status)
+       VALUES ($1,'pending')
+       ON CONFLICT (driver_id) DO NOTHING`,
+      [driverId]
+    );
 
-    if (!existingDocs) {
-      await supabaseAdmin.from('driver_documentss').insert({
-        driver_id: driverId,
-        verification_status: 'pending',
-      });
-    }
+    // 6. Create wallet if missing
+    await query(
+      `INSERT INTO driver_wallets (driver_id, balance, outstanding_dues)
+       VALUES ($1,0,0)
+       ON CONFLICT (driver_id) DO NOTHING`,
+      [driverId]
+    );
 
-    // 6. Create wallet if not exists
-    await supabaseAdmin.from('driver_wallets').upsert({
-      driver_id: driverId,
-      balance: 0,
-      outstanding_dues: 0,
-    }, { onConflict: 'driver_id', ignoreDuplicates: true });
-
-    return reply.send({
-      success: true,
-      message: 'Registration complete. Pending admin approval.',
-    });
+    return reply.send({ success: true, message: 'Registration complete. Pending admin approval.' });
   } catch (err) {
     request.log.error(err);
     return reply.code(500).send({ success: false, message: err.message });
@@ -223,34 +160,25 @@ async function completeRegistration(request, reply) {
 
 // ──────────────────────────────────────────────────────────────
 // PUT /api/driver/online-status
-// Body: { isOnline: true/false }
 // ──────────────────────────────────────────────────────────────
 async function updateOnlineStatus(request, reply) {
-  const driverId = request.driver.id;
+  const driverId  = request.driver.id;
   const { isOnline } = request.body;
 
   if (typeof isOnline !== 'boolean') {
     return reply.code(400).send({ success: false, message: 'isOnline must be boolean' });
   }
 
-  const { error } = await supabaseAdmin
-    .from('driver_profiles')
-    .update({
-      is_online: isOnline,
-      status: isOnline ? 'online' : 'offline',
-    })
-    .eq('id', driverId);
-
-  if (error) {
-    return reply.code(500).send({ success: false, message: 'Failed to update status' });
-  }
+  await query(
+    `UPDATE driver_profiles SET is_online=$1, status=$2 WHERE id=$3`,
+    [isOnline, isOnline ? 'online' : 'offline', driverId]
+  );
 
   return reply.send({ success: true, isOnline, status: isOnline ? 'online' : 'offline' });
 }
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/driver/gps
-// Body: { tripId, latitude, longitude, accuracy, speed, heading }
 // ──────────────────────────────────────────────────────────────
 async function updateGpsLocation(request, reply) {
   const driverId = request.driver.id;
@@ -260,28 +188,17 @@ async function updateGpsLocation(request, reply) {
     return reply.code(400).send({ success: false, message: 'latitude and longitude required' });
   }
 
-  // Insert GPS record
-  await supabaseAdmin.from('driver_gps_locations').insert({
-    driver_id: driverId,
-    trip_id: tripId || null,
-    latitude,
-    longitude,
-    accuracy: accuracy || null,
-    speed: speed || null,
-    heading: heading || null,
-  });
+  await query(
+    `INSERT INTO driver_gps_locations (driver_id, trip_id, latitude, longitude, accuracy, speed, heading)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [driverId, tripId || null, latitude, longitude, accuracy || null, speed || null, heading || null]
+  );
 
-  // Also emit via Socket.io for live tracking
+  // Emit via Socket.io for live tracking
   const { getIo } = require('../services/socketService');
   const io = getIo();
   if (io) {
-    io.to('admin').emit('gps:update', {
-      driverId,
-      tripId,
-      latitude,
-      longitude,
-      timestamp: new Date().toISOString(),
-    });
+    io.to('admin').emit('gps:update', { driverId, tripId, latitude, longitude, timestamp: new Date().toISOString() });
   }
 
   return reply.send({ success: true });
@@ -289,7 +206,6 @@ async function updateGpsLocation(request, reply) {
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/driver/upload-avatar
-// Multipart: file field = "avatar"
 // ──────────────────────────────────────────────────────────────
 async function uploadAvatar(request, reply) {
   const driverId = request.driver.id;
@@ -300,17 +216,17 @@ async function uploadAvatar(request, reply) {
 
     const buffer = await data.toBuffer();
     const result = await uploadFile({
-      bucket: process.env.STORAGE_BUCKET_AVATARS || 'driver-avatars',
-      folder: `avatars`,
+      bucket:   process.env.STORAGE_BUCKET_AVATARS || 'driver-avatars',
+      folder:   'avatars',
       filename: data.filename,
       buffer,
       mimetype: data.mimetype,
     });
 
-    await supabaseAdmin
-      .from('driver_profiles')
-      .update({ avatar_url: result.publicUrl })
-      .eq('id', driverId);
+    await query(
+      `UPDATE driver_profiles SET avatar_url=$1 WHERE id=$2`,
+      [result.publicUrl, driverId]
+    );
 
     return reply.send({ success: true, url: result.publicUrl });
   } catch (err) {
@@ -321,23 +237,21 @@ async function uploadAvatar(request, reply) {
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/driver/upload-document
-// Multipart: file + docType (aadhar | pan | license | rc)
 // ──────────────────────────────────────────────────────────────
 async function uploadDocument(request, reply) {
   const driverId = request.driver.id;
 
   try {
-    const parts = request.parts();
-    let docType = null;
-    let fileData = null;
+    const parts   = request.parts();
+    let docType   = null;
+    let fileData  = null;
 
     for await (const part of parts) {
       if (part.fieldname === 'docType') {
         docType = part.value;
       } else if (part.type === 'file') {
-        fileData = part;
-        const buffer = await part.toBuffer();
-        fileData.buffer = buffer;
+        const buffer    = await part.toBuffer();
+        fileData        = { ...part, buffer };
       }
     }
 
@@ -351,31 +265,22 @@ async function uploadDocument(request, reply) {
     }
 
     const result = await uploadFile({
-      bucket: process.env.STORAGE_BUCKET_DOCUMENTS || 'driver-documents',
-      folder: `${driverId}/${docType}`,
+      bucket:   process.env.STORAGE_BUCKET_DOCUMENTS || 'driver-documents',
+      folder:   `${driverId}/${docType}`,
       filename: fileData.filename,
-      buffer: fileData.buffer,
+      buffer:   fileData.buffer,
       mimetype: fileData.mimetype,
     });
 
-    // Update the documents record
-    const fieldMap = {
-      aadhar: 'aadhar_url',
-      pan: 'pan_url',
-      license: 'license_url',
-      rc: 'rc_url',
-    };
+    const fieldMap = { aadhar: 'aadhar_url', pan: 'pan_url', license: 'license_url', rc: 'rc_url' };
 
-    await supabaseAdmin
-      .from('driver_documentss')
-      .upsert(
-        {
-          driver_id: driverId,
-          [fieldMap[docType]]: result.path,
-          verification_status: 'pending',
-        },
-        { onConflict: 'driver_id' }
-      );
+    await query(
+      `INSERT INTO driver_documentss (driver_id, ${fieldMap[docType]}, verification_status)
+       VALUES ($1,$2,'pending')
+       ON CONFLICT (driver_id)
+       DO UPDATE SET ${fieldMap[docType]}=$2, verification_status='pending'`,
+      [driverId, result.path]
+    );
 
     return reply.send({ success: true, path: result.path, url: result.publicUrl });
   } catch (err) {
@@ -390,19 +295,13 @@ async function uploadDocument(request, reply) {
 async function getNotifications(request, reply) {
   const driverId = request.driver.id;
 
-  const { data, error } = await supabaseAdmin
-    .from('driver_notifications')
-    .select('*')
-    .eq('driver_id', driverId)
-    .order('created_at', { ascending: false })
-    .limit(50);
+  const { rows } = await query(
+    `SELECT * FROM driver_notifications WHERE driver_id=$1 ORDER BY created_at DESC LIMIT 50`,
+    [driverId]
+  );
 
-  if (error) return reply.code(500).send({ success: false, message: 'Failed to fetch notifications' });
-
-  // Count unread
-  const unreadCount = (data || []).filter((n) => !n.is_read).length;
-
-  return reply.send({ success: true, data: data || [], unreadCount });
+  const unreadCount = rows.filter((n) => !n.is_read).length;
+  return reply.send({ success: true, data: rows, unreadCount });
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -411,23 +310,17 @@ async function getNotifications(request, reply) {
 async function markNotificationsRead(request, reply) {
   const driverId = request.driver.id;
 
-  await supabaseAdmin
-    .from('driver_notifications')
-    .update({ is_read: true })
-    .eq('driver_id', driverId)
-    .eq('is_read', false);
+  await query(
+    `UPDATE driver_notifications SET is_read=true WHERE driver_id=$1 AND is_read=false`,
+    [driverId]
+  );
 
   return reply.send({ success: true });
 }
 
 module.exports = {
-  getProfile,
-  updateProfile,
-  completeRegistration,
-  updateOnlineStatus,
-  updateGpsLocation,
-  uploadAvatar,
-  uploadDocument,
-  getNotifications,
-  markNotificationsRead,
+  getProfile, updateProfile, completeRegistration,
+  updateOnlineStatus, updateGpsLocation,
+  uploadAvatar, uploadDocument,
+  getNotifications, markNotificationsRead,
 };

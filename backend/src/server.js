@@ -4,11 +4,7 @@
 require('dotenv').config();
 
 const Fastify = require('fastify');
-const http = require('http');
 
-// ──────────────────────────────────────────────────────────────
-// Create Fastify instance
-// ──────────────────────────────────────────────────────────────
 const fastify = Fastify({
   logger: {
     level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',
@@ -24,7 +20,6 @@ const fastify = Fastify({
 // Register plugins
 // ──────────────────────────────────────────────────────────────
 async function registerPlugins() {
-  // CORS
   await fastify.register(require('@fastify/cors'), {
     origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -32,39 +27,27 @@ async function registerPlugins() {
     credentials: true,
   });
 
-  // Helmet — security headers
-  await fastify.register(require('@fastify/helmet'), {
-    contentSecurityPolicy: false, // disable for API
-  });
+  await fastify.register(require('@fastify/helmet'), { contentSecurityPolicy: false });
 
-  // JWT
   await fastify.register(require('@fastify/jwt'), {
-    secret: process.env.JWT_SECRET || 'qc-driver-super-secret-change-in-production',
+    secret: process.env.JWT_SECRET || 'dechta-driver-secret-change-in-production',
     sign: { expiresIn: '30d' },
   });
 
-  // Rate limiting
   await fastify.register(require('@fastify/rate-limit'), {
     max: 100,
     timeWindow: '1 minute',
     keyGenerator: (req) => req.headers['x-forwarded-for'] || req.ip,
-    errorResponseBuilder: () => ({
-      success: false,
-      message: 'Too many requests. Please slow down.',
-    }),
+    errorResponseBuilder: () => ({ success: false, message: 'Too many requests. Please slow down.' }),
   });
 
-  // Multipart (for file uploads)
   await fastify.register(require('@fastify/multipart'), {
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB max per file
-      files: 1,
-    },
+    limits: { fileSize: 10 * 1024 * 1024, files: 1 },
   });
 }
 
 // ──────────────────────────────────────────────────────────────
-// Register routes under /api prefix
+// Register routes
 // ──────────────────────────────────────────────────────────────
 async function registerRoutes() {
   await fastify.register(require('./routes/auth'), { prefix: '/api/auth' });
@@ -78,19 +61,16 @@ async function registerRoutes() {
 // ──────────────────────────────────────────────────────────────
 // Health check
 // ──────────────────────────────────────────────────────────────
-fastify.get('/health', async (request, reply) => {
-  return {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'QC Driver Backend',
-    version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-  };
-});
+fastify.get('/health', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  service: 'Dechta Driver Backend',
+  version: '2.0.0',
+  environment: process.env.NODE_ENV || 'development',
+  database: 'PostgreSQL',
+}));
 
-fastify.get('/', async (request, reply) => {
-  return { message: 'QC Logistics Driver API is running 🚚', docs: '/api/docs' };
-});
+fastify.get('/', async () => ({ message: 'Dechta Driver API is running 🚚', docs: '/api/docs' }));
 
 // ──────────────────────────────────────────────────────────────
 // Global error handler
@@ -98,86 +78,120 @@ fastify.get('/', async (request, reply) => {
 fastify.setErrorHandler((error, request, reply) => {
   request.log.error(error);
 
-  // Validation errors
   if (error.validation) {
-    return reply.code(400).send({
-      success: false,
-      message: 'Validation error',
-      details: error.validation,
-    });
+    return reply.code(400).send({ success: false, message: 'Validation error', details: error.validation });
   }
-
-  // Rate limit
   if (error.statusCode === 429) {
-    return reply.code(429).send({
-      success: false,
-      message: error.message,
-    });
+    return reply.code(429).send({ success: false, message: error.message });
   }
-
-  // JWT errors
   if (error.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER' || error.code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED') {
     return reply.code(401).send({ success: false, message: 'Unauthorized' });
   }
 
-  // Generic server error
   return reply.code(error.statusCode || 500).send({
     success: false,
     message: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message,
   });
 });
 
-// 404 handler
 fastify.setNotFoundHandler((request, reply) => {
-  reply.code(404).send({
-    success: false,
-    message: `Route ${request.method} ${request.url} not found`,
-  });
+  reply.code(404).send({ success: false, message: `Route ${request.method} ${request.url} not found` });
 });
 
 // ──────────────────────────────────────────────────────────────
-// Bootstrap — create HTTP server, attach Socket.io, start
+// PostgreSQL LISTEN/NOTIFY for real-time new orders
+// Triggers socket broadcast to drivers
+// ──────────────────────────────────────────────────────────────
+async function startOrderListener(broadcastNewOrder) {
+  const { getClient } = require('./config/db');
+
+  let listenClient;
+  let retryCount = 0;
+  const maxRetries = 10;
+
+  async function connect() {
+    try {
+      listenClient = await getClient();
+
+      await listenClient.query('LISTEN new_order');
+      fastify.log.info('[PG LISTEN] Listening for new_order notifications');
+
+      listenClient.on('notification', (msg) => {
+        if (msg.channel === 'new_order') {
+          try {
+            const order = JSON.parse(msg.payload);
+            fastify.log.info({ orderId: order.id }, '[PG LISTEN] New order — broadcasting to drivers');
+            broadcastNewOrder(order);
+          } catch (e) {
+            fastify.log.warn('[PG LISTEN] Failed to parse notification payload:', e.message);
+          }
+        }
+      });
+
+      listenClient.on('error', async (err) => {
+        fastify.log.error('[PG LISTEN] Client error:', err.message);
+        listenClient.release();
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(connect, 3000 * retryCount);
+        }
+      });
+
+      listenClient.on('end', async () => {
+        fastify.log.warn('[PG LISTEN] Client disconnected — reconnecting...');
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(connect, 3000 * retryCount);
+        }
+      });
+
+      retryCount = 0;
+    } catch (err) {
+      fastify.log.error('[PG LISTEN] Failed to connect:', err.message);
+      if (retryCount < maxRetries) {
+        retryCount++;
+        setTimeout(connect, 3000 * retryCount);
+      }
+    }
+  }
+
+  await connect();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Bootstrap
 // ──────────────────────────────────────────────────────────────
 async function start() {
   try {
+    // Test DB connection first
+    const { query } = require('./config/db');
+    await query('SELECT 1');
+    fastify.log.info('[DB] PostgreSQL connected ✓');
+
     await registerPlugins();
     await registerRoutes();
-
-    // Get Fastify's underlying Node HTTP server
     await fastify.ready();
+
     const httpServer = fastify.server;
 
-    // Initialize Socket.io on the same HTTP server
-    const { initSocket } = require('./services/socketService');
+    // Initialize Socket.io
+    const { initSocket, broadcastNewOrder } = require('./services/socketService');
     initSocket(httpServer);
 
-    // Initialize Supabase Realtime listeners
-    const { supabaseAdmin } = require('./config/supabase');
-    const { broadcastNewOrder } = require('./services/socketService');
-
-    // Listen for new orders on Supabase Realtime — push to online drivers
-    const ordersChannel = supabaseAdmin
-      .channel('public:orders')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        (payload) => {
-          fastify.log.info({ orderId: payload.new.id }, 'New order received — broadcasting to drivers');
-          broadcastNewOrder(payload.new);
-        }
-      )
-      .subscribe();
+    // Start PG LISTEN/NOTIFY for real-time order broadcast
+    // (vendor app triggers NOTIFY new_order via DB trigger)
+    await startOrderListener(broadcastNewOrder);
 
     const PORT = parseInt(process.env.PORT || '3000', 10);
-
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
 
     console.log(`
 ╔════════════════════════════════════════════════╗
-║   🚚 QC Driver Backend is running              ║
+║   🚚 Dechta Driver Backend is running          ║
 ║   Port    : ${PORT}                             
 ║   Env     : ${process.env.NODE_ENV || 'development'}                      
-║   Health  : http://localhost:${PORT}/health      
+║   DB      : PostgreSQL (dechta)                 
+║   Health  : http://localhost:${PORT}/health     
 ╚════════════════════════════════════════════════╝
     `);
   } catch (err) {
@@ -186,16 +200,7 @@ async function start() {
   }
 }
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  fastify.log.info('SIGTERM received. Shutting down gracefully...');
-  await fastify.close();
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  await fastify.close();
-  process.exit(0);
-});
+process.on('SIGTERM', async () => { await fastify.close(); process.exit(0); });
+process.on('SIGINT', async () => { await fastify.close(); process.exit(0); });
 
 start();

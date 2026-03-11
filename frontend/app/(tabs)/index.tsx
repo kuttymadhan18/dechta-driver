@@ -222,7 +222,7 @@ export default function HomeScreen() {
         if (promoRes.success && promoRes.data?.length > 0) {
           setPromoMedia(promoRes.data.map((p: any) => p.image_url).filter(Boolean));
         }
-      } catch (_) {}
+      } catch (_) { }
     } catch (e) {
       console.log("Dashboard load error:", e);
     }
@@ -256,7 +256,7 @@ export default function HomeScreen() {
       setShowOfflineConfirm(true);
     } else {
       setIsOnline(true);
-      // Real orders come via Supabase Realtime / socket
+      // Real orders come via WebSocket (Socket.io)
       // No fake order simulation
     }
   };

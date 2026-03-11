@@ -1,11 +1,10 @@
 // src/controllers/authController.js
 const { sendOtp, verifyOtp } = require('../services/otpService');
-const { supabaseAdmin } = require('../config/supabase');
-const { v4: uuidv4 } = require('uuid');
+const { query }              = require('../config/db');
+const { v4: uuidv4 }         = require('uuid');
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/auth/send-otp
-// Body: { mobile: "9876543210" }
 // ──────────────────────────────────────────────────────────────
 async function sendOtpHandler(request, reply) {
   const { mobile } = request.body;
@@ -20,7 +19,6 @@ async function sendOtpHandler(request, reply) {
       success: true,
       message: 'OTP sent successfully',
       provider: result.provider,
-      // Only expose test OTP in mock/dev mode
       ...(result.provider === 'mock' && { otp_for_testing: result.otp_for_testing }),
     });
   } catch (err) {
@@ -31,8 +29,6 @@ async function sendOtpHandler(request, reply) {
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/auth/verify-otp
-// Body: { mobile: "9876543210", otp: "1234" }
-// Returns: { token, driver, isNewDriver }
 // ──────────────────────────────────────────────────────────────
 async function verifyOtpHandler(request, reply) {
   const { mobile, otp } = request.body;
@@ -47,50 +43,41 @@ async function verifyOtpHandler(request, reply) {
       return reply.code(400).send({ success: false, message: otpResult.message });
     }
 
-    // Check if driver profile exists
-    const { data: existingDriver } = await supabaseAdmin
-      .from('driver_profiles')
-      .select('*')
-      .eq('mobile_number', mobile)
-      .single();
+    // Check existing driver
+    const { rows: existing } = await query(
+      `SELECT * FROM driver_profiles WHERE mobile_number = $1`,
+      [mobile]
+    );
 
-    let driver = existingDriver;
+    let driver     = existing[0];
     let isNewDriver = false;
 
     if (!driver) {
-      // New driver — create a minimal profile
       isNewDriver = true;
       const referralCode = `QC${mobile.slice(-4)}${uuidv4().slice(0, 4).toUpperCase()}`;
 
-      const { data: newDriver, error: createError } = await supabaseAdmin
-        .from('driver_profiles')
-        .insert({
-          mobile_number: mobile,
-          full_name: '',
-          referral_code: referralCode,
-          is_approved: false,
-          is_online: false,
-          status: 'offline',
-        })
-        .select()
-        .single();
+      const { rows: created } = await query(
+        `INSERT INTO driver_profiles
+           (mobile_number, full_name, referral_code, is_approved, is_online, status)
+         VALUES ($1, '', $2, false, false, 'offline')
+         RETURNING *`,
+        [mobile, referralCode]
+      );
 
-      if (createError) {
-        request.log.error(createError);
-        return reply.code(500).send({ success: false, message: 'Failed to create driver profile' });
-      }
+      driver = created[0];
 
       // Create driver_stats row
-      await supabaseAdmin.from('driver_stats').insert({ driver_id: newDriver.id });
-
-      driver = newDriver;
+      await query(
+        `INSERT INTO driver_stats (driver_id) VALUES ($1) ON CONFLICT (driver_id) DO NOTHING`,
+        [driver.id]
+      );
     }
 
     // Issue JWT
     const token = await reply.jwtSign(
       {
-        driverId: driver.id,
-        mobile: driver.mobile_number,
+        driverId:   driver.id,
+        mobile:     driver.mobile_number,
         isApproved: driver.is_approved,
       },
       { expiresIn: '30d' }
@@ -101,14 +88,14 @@ async function verifyOtpHandler(request, reply) {
       token,
       isNewDriver,
       driver: {
-        id: driver.id,
-        driverId: driver.driver_id,
-        fullName: driver.full_name,
-        mobile: driver.mobile_number,
-        isApproved: driver.is_approved,
-        isOnline: driver.is_online,
-        status: driver.status,
-        avatarUrl: driver.avatar_url,
+        id:           driver.id,
+        driverId:     driver.driver_id,
+        fullName:     driver.full_name,
+        mobile:       driver.mobile_number,
+        isApproved:   driver.is_approved,
+        isOnline:     driver.is_online,
+        status:       driver.status,
+        avatarUrl:    driver.avatar_url,
         referralCode: driver.referral_code,
       },
     });
@@ -120,24 +107,24 @@ async function verifyOtpHandler(request, reply) {
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/auth/refresh-token
-// Refreshes JWT for already-authenticated driver
 // ──────────────────────────────────────────────────────────────
 async function refreshTokenHandler(request, reply) {
   try {
     await request.jwtVerify();
     const { driverId } = request.user;
 
-    const { data: driver } = await supabaseAdmin
-      .from('driver_profiles')
-      .select('id, mobile_number, driver_id, full_name, is_approved, status')
-      .eq('id', driverId)
-      .single();
+    const { rows } = await query(
+      `SELECT id, mobile_number, driver_id, full_name, is_approved, status
+       FROM driver_profiles WHERE id = $1`,
+      [driverId]
+    );
 
-    if (!driver) {
+    if (!rows.length) {
       return reply.code(404).send({ success: false, message: 'Driver not found' });
     }
 
-    const token = await reply.jwtSign(
+    const driver = rows[0];
+    const token  = await reply.jwtSign(
       { driverId: driver.id, mobile: driver.mobile_number, isApproved: driver.is_approved },
       { expiresIn: '30d' }
     );

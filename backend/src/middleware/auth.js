@@ -1,36 +1,32 @@
 // src/middleware/auth.js
-const { supabaseAdmin } = require('../config/supabase');
-
 // ──────────────────────────────────────────────────────────────
 // Fastify preHandler — verifies JWT and attaches driver to request
+// Uses PostgreSQL
 // ──────────────────────────────────────────────────────────────
+const { query } = require('../config/db');
+
 async function authenticate(request, reply) {
   try {
     await request.jwtVerify();
 
     const driverId = request.user.driverId;
 
-    // Fetch driver profile from DB
-    const { data: driver, error } = await supabaseAdmin
-      .from('driver_profiles')
-      .select('id, mobile_number, driver_id, full_name, is_approved, status')
-      .eq('id', driverId)
-      .single();
+    const { rows } = await query(
+      `SELECT id, mobile_number, driver_id, full_name, is_approved, status
+       FROM driver_profiles WHERE id = $1`,
+      [driverId]
+    );
 
-    if (error || !driver) {
+    if (!rows.length) {
       return reply.code(401).send({ success: false, message: 'Driver not found' });
     }
 
-    // Attach driver to request for downstream use
-    request.driver = driver;
+    request.driver = rows[0];
   } catch (err) {
     reply.code(401).send({ success: false, message: 'Unauthorized. Invalid or expired token.' });
   }
 }
 
-// ──────────────────────────────────────────────────────────────
-// Check if driver is approved before allowing sensitive actions
-// ──────────────────────────────────────────────────────────────
 async function requireApproved(request, reply) {
   if (!request.driver) {
     return reply.code(401).send({ success: false, message: 'Not authenticated' });

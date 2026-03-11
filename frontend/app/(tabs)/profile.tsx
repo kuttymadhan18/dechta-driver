@@ -16,11 +16,11 @@ const { height } = Dimensions.get('window');
 // PURE NATIVE SVG ICONS
 // ═══════════════════════════════════════════════════════════════════════════
 function NativeIcon({ name, size = 24, color = "currentColor" }: { name: string, size?: number, color?: string }) {
-  switch(name) {
-    case 'award': return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><Circle cx="12" cy="8" r="7"/><Polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></Svg>;
-    case 'crown': return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><Polygon points="2 4 5 15 12 11 19 15 22 4 17 7 12 2 7 7 2 4"/><Path d="M2 17h20v5H2z" fill="currentColor"/></Svg>;
-    case 'truck': return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><Rect x="1" y="3" width="15" height="13"/><Polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><Circle cx="5.5" cy="18.5" r="2.5"/><Circle cx="18.5" cy="18.5" r="2.5"/></Svg>;
-    case 'card': return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><Rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><Line x1="1" y1="10" x2="23" y2="10"/></Svg>;
+  switch (name) {
+    case 'award': return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><Circle cx="12" cy="8" r="7" /><Polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></Svg>;
+    case 'crown': return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><Polygon points="2 4 5 15 12 11 19 15 22 4 17 7 12 2 7 7 2 4" /><Path d="M2 17h20v5H2z" fill="currentColor" /></Svg>;
+    case 'truck': return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><Rect x="1" y="3" width="15" height="13" /><Polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><Circle cx="5.5" cy="18.5" r="2.5" /><Circle cx="18.5" cy="18.5" r="2.5" /></Svg>;
+    case 'card': return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><Rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><Line x1="1" y1="10" x2="23" y2="10" /></Svg>;
     default: return <Feather name="help-circle" size={size} color={color} />;
   }
 }
@@ -29,14 +29,14 @@ function NativeIcon({ name, size = 24, color = "currentColor" }: { name: string,
 // RANK DEFINITIONS (static — same as backend)
 // ═══════════════════════════════════════════════════════════════════════════
 const ranks = [
-  { id: 1, name: 'Trainee',              threshold: 0,  icon: 'user',  colorBg: '#F1F5F9', colorText: '#475569' },
-  { id: 2, name: 'Second Officer',       threshold: 16, icon: 'award', colorBg: '#CFFAFE', colorText: '#0369A1' },
+  { id: 1, name: 'Trainee', threshold: 0, icon: 'user', colorBg: '#F1F5F9', colorText: '#475569' },
+  { id: 2, name: 'Second Officer', threshold: 16, icon: 'award', colorBg: '#CFFAFE', colorText: '#0369A1' },
   { id: 3, name: 'Junior First Officer', threshold: 18, icon: 'award', colorBg: '#DBEAFE', colorText: '#1D4ED8' },
-  { id: 4, name: 'First Officer',        threshold: 20, icon: 'star',  colorBg: '#E0E7FF', colorText: '#4338CA' },
-  { id: 5, name: 'Captain',              threshold: 22, icon: 'award', colorBg: '#F3E8FF', colorText: '#7E22CE' },
-  { id: 6, name: 'Flight Captain',       threshold: 24, icon: 'crown', colorBg: '#FEF3C7', colorText: '#B45309' },
-  { id: 7, name: 'Senior Flight Captain',threshold: 26, icon: 'crown', colorBg: '#FFEDD5', colorText: '#C2410C' },
-  { id: 8, name: 'Commercial Captain',   threshold: 30, icon: 'crown', colorBg: '#FEE2E2', colorText: '#B91C1C' },
+  { id: 4, name: 'First Officer', threshold: 20, icon: 'star', colorBg: '#E0E7FF', colorText: '#4338CA' },
+  { id: 5, name: 'Captain', threshold: 22, icon: 'award', colorBg: '#F3E8FF', colorText: '#7E22CE' },
+  { id: 6, name: 'Flight Captain', threshold: 24, icon: 'crown', colorBg: '#FEF3C7', colorText: '#B45309' },
+  { id: 7, name: 'Senior Flight Captain', threshold: 26, icon: 'crown', colorBg: '#FFEDD5', colorText: '#C2410C' },
+  { id: 8, name: 'Commercial Captain', threshold: 30, icon: 'crown', colorBg: '#FEE2E2', colorText: '#B91C1C' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -44,14 +44,14 @@ const ranks = [
 // ═══════════════════════════════════════════════════════════════════════════
 export default function ProfileScreen() {
   const router = useRouter();
-  const [activeModal, setActiveModal]   = useState<string | null>(null);
-  const [isVoiceOn, setIsVoiceOn]       = useState(true);
-  const [perfPeriod, setPerfPeriod]     = useState('daily');
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [isVoiceOn, setIsVoiceOn] = useState(true);
+  const [perfPeriod, setPerfPeriod] = useState('daily');
   const [notifSettings, setNotifSettings] = useState<Record<string, boolean>>({
     newOrders: true, earnings: true, promotions: true, updates: true
   });
   const [isWalletOpen, setIsWalletOpen] = useState(false);
-  const [loading, setLoading]           = useState(true);
+  const [loading, setLoading] = useState(true);
 
   // ── Real data state ─────────────────────────────────────────────────
   const [dbData, setDbData] = useState<any>({
@@ -63,7 +63,7 @@ export default function ProfileScreen() {
     rating: 5.0,
   });
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [graphData, setGraphData] = useState<Record<string, {label: string; value: number}[]>>({
+  const [graphData, setGraphData] = useState<Record<string, { label: string; value: number }[]>>({
     daily: [], monthly: [], yearly: []
   });
 
@@ -80,58 +80,58 @@ export default function ProfileScreen() {
 
       if (profileRes.status === 'fulfilled' && profileRes.value.success) {
         const d = profileRes.value.data;
-        const p = d.profile   || {};
-        const s = d.stats     || {};
-        const v = d.vehicle   || {};
-        const b = d.bank      || {};
+        const p = d.profile || {};
+        const s = d.stats || {};
+        const v = d.vehicle || {};
+        const b = d.bank || {};
         const docs = d.documents || {};
-        const w = d.wallet    || {};
+        const w = d.wallet || {};
 
         setDbData({
-          fullName:      p.full_name        || 'Partner',
-          driverId:      p.driver_id        || p.id || '—',
-          avatarUrl:     p.avatar_url       || null,
-          referralCode:  p.referral_code    || '—',
-          todayOrders:   s.total_orders_completed || 0,
-          todayEarnings: s.total_earnings   || 0,
-          weeklyOrders:  s.weekly_orders_completed || 0,
-          walletBalance: w.balance          || 0,
-          vehicleType:   v.vehicle_type     || '—',
+          fullName: p.full_name || 'Partner',
+          driverId: p.driver_id || p.id || '—',
+          avatarUrl: p.avatar_url || null,
+          referralCode: p.referral_code || '—',
+          todayOrders: s.total_orders_completed || 0,
+          todayEarnings: s.total_earnings || 0,
+          weeklyOrders: s.weekly_orders_completed || 0,
+          walletBalance: w.balance || 0,
+          vehicleType: v.vehicle_type || '—',
           vehicleNumber: v.registration_number || '—',
-          weightLimit:   v.weight_capacity  ? `${v.weight_capacity} kg` : '—',
-          modelName:     v.model_name       || v.vehicle_type || '—',
-          bankAccount:   b.account_number   || '—',
-          ifscCode:      b.ifsc_code        || '—',
-          aadharUrl:     docs.aadhar_url    || null,
-          panUrl:        docs.pan_url       || null,
-          licenseUrl:    docs.license_url   || null,
-          rcUrl:         docs.rc_url        || null,
-          rating:        parseFloat(s.rating || '5.0'),
+          weightLimit: v.weight_capacity ? `${v.weight_capacity} kg` : '—',
+          modelName: v.model_name || v.vehicle_type || '—',
+          bankAccount: b.account_number || '—',
+          ifscCode: b.ifsc_code || '—',
+          aadharUrl: docs.aadhar_url || null,
+          panUrl: docs.pan_url || null,
+          licenseUrl: docs.license_url || null,
+          rcUrl: docs.rc_url || null,
+          rating: parseFloat(s.rating || '5.0'),
         });
       }
 
       if (leaderRes.status === 'fulfilled' && leaderRes.value.success) {
         const raw = leaderRes.value.data || [];
         setLeaderboard(raw.slice(0, 5).map((r: any) => ({
-          name:     r.isMe ? 'You' : (r.fullName || 'Driver'),
+          name: r.isMe ? 'You' : (r.fullName || 'Driver'),
           earnings: r.weeklyEarnings || 0,
-          trips:    r.weeklyTrips    || 0,
-          rank:     r.rank,
-          isMe:     r.isMe,
+          trips: r.weeklyTrips || 0,
+          rank: r.rank,
+          isMe: r.isMe,
         })));
       }
 
       // Fetch graph data for all periods in parallel (non-blocking)
       try {
         const today = new Date();
-        const dateKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         const [dailyRes, monthlyRes, yearlyRes] = await Promise.allSettled([
-          EarningsAPI.get('daily', dateKey),
-          EarningsAPI.get('monthly', dateKey),
-          EarningsAPI.get('yearly', dateKey),
+          EarningsAPI.get('daily', dateKey as any),
+          EarningsAPI.get('monthly', dateKey as any),
+          EarningsAPI.get('yearly', dateKey as any),
         ]);
 
-        const toGraph = (res: any, labelFn: (t: any) => string): {label: string; value: number}[] => {
+        const toGraph = (res: any, labelFn: (t: any) => string): { label: string; value: number }[] => {
           if (res.status !== 'fulfilled' || !res.value.success) return [];
           return (res.value.data?.trips || []).slice(0, 7).map((t: any) => ({
             label: labelFn(t),
@@ -140,11 +140,11 @@ export default function ProfileScreen() {
         };
 
         setGraphData({
-          daily:   toGraph(dailyRes,   (t) => t.date ? new Date(t.date).toLocaleDateString('en-IN', {weekday:'short'}) : ''),
-          monthly: toGraph(monthlyRes, (t) => t.date ? new Date(t.date).toLocaleDateString('en-IN', {month:'short'}) : ''),
-          yearly:  toGraph(yearlyRes,  (t) => t.date ? new Date(t.date).toLocaleDateString('en-IN', {month:'short'}) : ''),
+          daily: toGraph(dailyRes, (t) => t.date ? new Date(t.date).toLocaleDateString('en-IN', { weekday: 'short' }) : ''),
+          monthly: toGraph(monthlyRes, (t) => t.date ? new Date(t.date).toLocaleDateString('en-IN', { month: 'short' }) : ''),
+          yearly: toGraph(yearlyRes, (t) => t.date ? new Date(t.date).toLocaleDateString('en-IN', { month: 'short' }) : ''),
         });
-      } catch (_) {}
+      } catch (_) { }
 
     } catch (e) {
       console.log('Profile load error:', e);
@@ -176,7 +176,7 @@ export default function ProfileScreen() {
   const progressPercent = Math.min(100, (currentWeeklyOrders / 50) * 100);
   const ordersNeededForPilot = Math.max(0, 50 - currentWeeklyOrders);
 
-  const toggleNotif = (key: string) => setNotifSettings(prev => ({...prev, [key]: !prev[key]}));
+  const toggleNotif = (key: string) => setNotifSettings(prev => ({ ...prev, [key]: !prev[key] }));
 
   const renderModal = () => {
     if (!activeModal) return null;
@@ -199,31 +199,31 @@ export default function ProfileScreen() {
             <Feather name="award" size={24} color="#0284C7" />
             <Text style={styles.modalTitle}>Weekly Aviation Ranks</Text>
           </View>
-          <View style={[styles.rankHeroCard, {backgroundColor: currentRank.colorBg}]}>
+          <View style={[styles.rankHeroCard, { backgroundColor: currentRank.colorBg }]}>
             <View style={styles.rowBetween}>
               <View>
-                <Text style={[styles.rankSubText, {color: currentRank.colorText}]}>CURRENT RANK</Text>
-                <Text style={[styles.rankHeroText, {color: currentRank.colorText}]}>{currentRank.name}</Text>
+                <Text style={[styles.rankSubText, { color: currentRank.colorText }]}>CURRENT RANK</Text>
+                <Text style={[styles.rankHeroText, { color: currentRank.colorText }]}>{currentRank.name}</Text>
               </View>
               <View style={styles.rankHeroIconBox}>
                 <NativeIcon name={currentRank.icon} size={32} color={currentRank.colorText} />
               </View>
             </View>
             {nextRank ? (
-              <View style={{marginTop: 16}}>
+              <View style={{ marginTop: 16 }}>
                 <View style={styles.rowBetween}>
-                  <Text style={[{fontSize: 12, fontWeight: 'bold'}, {color: currentRank.colorText}]}>{currentWeeklyOrders} Orders</Text>
-                  <Text style={{fontSize: 12, fontWeight: 'bold', color: 'rgba(0,0,0,0.5)'}}>{nextRank.threshold} Goal</Text>
+                  <Text style={[{ fontSize: 12, fontWeight: 'bold' }, { color: currentRank.colorText }]}>{currentWeeklyOrders} Orders</Text>
+                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: 'rgba(0,0,0,0.5)' }}>{nextRank.threshold} Goal</Text>
                 </View>
                 <View style={styles.progressBarBgLight}>
                   <View style={[styles.progressBarFillLight, { width: `${rankProgress}%`, backgroundColor: currentRank.colorText }]} />
                 </View>
-                <Text style={[{fontSize: 12, marginTop: 8, fontWeight: '600'}, {color: currentRank.colorText}]}>
+                <Text style={[{ fontSize: 12, marginTop: 8, fontWeight: '600' }, { color: currentRank.colorText }]}>
                   {ordersNeeded} more orders to reach {nextRank.name}
                 </Text>
               </View>
             ) : (
-              <Text style={[{fontSize: 14, fontWeight: 'bold', marginTop: 16}, {color: currentRank.colorText}]}>You are at the top rank! Incredible work!</Text>
+              <Text style={[{ fontSize: 14, fontWeight: 'bold', marginTop: 16 }, { color: currentRank.colorText }]}>You are at the top rank! Incredible work!</Text>
             )}
           </View>
           <Text style={styles.sectionTitle}>Progression Path</Text>
@@ -233,16 +233,16 @@ export default function ProfileScreen() {
               const isCurrent = index === currentRankIndex;
               return (
                 <View key={rank.id} style={styles.pathRow}>
-                  <View style={[styles.pathLine, index === ranks.length - 1 && {display: 'none'}]} />
-                  <View style={[styles.pathDot, (isCompleted || isCurrent) ? {backgroundColor: rank.colorBg} : {backgroundColor: '#F1F5F9'}]}>
+                  <View style={[styles.pathLine, index === ranks.length - 1 && { display: 'none' }]} />
+                  <View style={[styles.pathDot, (isCompleted || isCurrent) ? { backgroundColor: rank.colorBg } : { backgroundColor: '#F1F5F9' }]}>
                     <NativeIcon name={rank.icon} size={16} color={(isCompleted || isCurrent) ? rank.colorText : '#94A3B8'} />
                   </View>
-                  <View style={[styles.pathCard, isCurrent ? {backgroundColor: rank.colorBg, borderColor: rank.colorBg} : isCompleted ? {backgroundColor: '#F8FAFC'} : {backgroundColor: '#FFF', opacity: 0.5}]}>
+                  <View style={[styles.pathCard, isCurrent ? { backgroundColor: rank.colorBg, borderColor: rank.colorBg } : isCompleted ? { backgroundColor: '#F8FAFC' } : { backgroundColor: '#FFF', opacity: 0.5 }]}>
                     <View style={styles.rowBetween}>
-                      <Text style={[styles.pathCardTitle, isCurrent ? {color: rank.colorText} : {color: '#0F172A'}]}>{rank.name}</Text>
+                      <Text style={[styles.pathCardTitle, isCurrent ? { color: rank.colorText } : { color: '#0F172A' }]}>{rank.name}</Text>
                       {isCurrent && <View style={styles.currentBadge}><Text style={styles.currentBadgeText}>CURRENT</Text></View>}
                     </View>
-                    <Text style={[styles.pathCardSub, isCurrent ? {color: rank.colorText} : {color: '#64748B'}]}>
+                    <Text style={[styles.pathCardSub, isCurrent ? { color: rank.colorText } : { color: '#64748B' }]}>
                       {rank.threshold === 0 ? 'Starting Rank' : `${rank.threshold}+ Orders / Week`}
                     </Text>
                   </View>
@@ -267,22 +267,22 @@ export default function ProfileScreen() {
           <View style={styles.tabsRow}>
             {['daily', 'monthly', 'yearly'].map(p => (
               <TouchableOpacity key={p} onPress={() => setPerfPeriod(p)} style={[styles.tabBtn, perfPeriod === p ? styles.tabActive : styles.tabInactive]}>
-                <Text style={[styles.tabText, perfPeriod === p ? {color: '#FFF'} : {color: '#64748B'}]}>{p.charAt(0).toUpperCase() + p.slice(1)}</Text>
+                <Text style={[styles.tabText, perfPeriod === p ? { color: '#FFF' } : { color: '#64748B' }]}>{p.charAt(0).toUpperCase() + p.slice(1)}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.statsGrid}>
-            <View style={[styles.statBox, {borderColor: '#BFDBFE', backgroundColor: '#EFF6FF'}]}>
-              <Text style={[styles.statLabel, {color: '#1D4ED8'}]}>Rating</Text>
-              <Text style={[styles.statValue, {color: '#1E3A8A'}]}>{dbData.rating.toFixed(1)}⭐</Text>
+            <View style={[styles.statBox, { borderColor: '#BFDBFE', backgroundColor: '#EFF6FF' }]}>
+              <Text style={[styles.statLabel, { color: '#1D4ED8' }]}>Rating</Text>
+              <Text style={[styles.statValue, { color: '#1E3A8A' }]}>{dbData.rating.toFixed(1)}⭐</Text>
             </View>
-            <View style={[styles.statBox, {borderColor: '#BBF7D0', backgroundColor: '#F0FDF4'}]}>
-              <Text style={[styles.statLabel, {color: '#15803D'}]}>Earnings</Text>
-              <Text style={[styles.statValue, {color: '#14532D'}]}>₹{dbData.todayEarnings}</Text>
+            <View style={[styles.statBox, { borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' }]}>
+              <Text style={[styles.statLabel, { color: '#15803D' }]}>Earnings</Text>
+              <Text style={[styles.statValue, { color: '#14532D' }]}>₹{dbData.todayEarnings}</Text>
             </View>
-            <View style={[styles.statBox, {borderColor: '#E9D5FF', backgroundColor: '#FAF5FF'}]}>
-              <Text style={[styles.statLabel, {color: '#7E22CE'}]}>Trips</Text>
-              <Text style={[styles.statValue, {color: '#581C87'}]}>{dbData.todayOrders}</Text>
+            <View style={[styles.statBox, { borderColor: '#E9D5FF', backgroundColor: '#FAF5FF' }]}>
+              <Text style={[styles.statLabel, { color: '#7E22CE' }]}>Trips</Text>
+              <Text style={[styles.statValue, { color: '#581C87' }]}>{dbData.todayOrders}</Text>
             </View>
           </View>
           <View style={styles.graphCard}>
@@ -298,8 +298,8 @@ export default function ProfileScreen() {
                 ))}
               </View>
             ) : (
-              <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-                <Text style={{color:'#94A3B8',fontSize:13}}>No data for this period</Text>
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ color: '#94A3B8', fontSize: 13 }}>No data for this period</Text>
               </View>
             )}
           </View>
@@ -317,13 +317,13 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.leaderboardList}>
             {leaderboard.length === 0 ? (
-              <Text style={{color:'#94A3B8',textAlign:'center',marginTop:20}}>No leaderboard data yet</Text>
+              <Text style={{ color: '#94A3B8', textAlign: 'center', marginTop: 20 }}>No leaderboard data yet</Text>
             ) : leaderboard.map(driver => (
               <View key={driver.rank} style={[styles.leaderCard, driver.isMe ? styles.leaderCardMe : styles.leaderCardNormal]}>
                 <View style={[styles.rankBadge, driver.rank <= 3 ? styles.rankTop : styles.rankNormal]}>
                   {driver.rank <= 3 ? <Feather name="award" size={20} color="#FFF" /> : <Text style={styles.rankNum}>{driver.rank}</Text>}
                 </View>
-                <View style={{flex: 1}}>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.leaderName}>{driver.name}</Text>
                   <Text style={styles.leaderStats}>{driver.trips} trips • ₹{driver.earnings}</Text>
                 </View>
@@ -340,7 +340,7 @@ export default function ProfileScreen() {
       const renderDoc = (name: string, dbUrl: string | null) => (
         <View style={styles.docRow} key={name}>
           <View style={styles.rowCenter}>
-            <View style={{marginRight: 12}}>
+            <View style={{ marginRight: 12 }}>
               <Feather name="check-circle" size={18} color={dbUrl ? "#22C55E" : "#CBD5E1"} />
             </View>
             <View>
@@ -357,12 +357,12 @@ export default function ProfileScreen() {
       );
       content = (
         <View>
-          <Text style={[styles.modalTitle, {marginBottom: 16}]}>Documents</Text>
+          <Text style={[styles.modalTitle, { marginBottom: 16 }]}>Documents</Text>
           <View style={styles.docList}>
             {renderDoc('Driving License', dbData.licenseUrl)}
-            {renderDoc('RC Book',         dbData.rcUrl)}
-            {renderDoc('PAN Card',        dbData.panUrl)}
-            {renderDoc('Aadhaar Card',    dbData.aadharUrl)}
+            {renderDoc('RC Book', dbData.rcUrl)}
+            {renderDoc('PAN Card', dbData.panUrl)}
+            {renderDoc('Aadhaar Card', dbData.aadharUrl)}
           </View>
         </View>
       );
@@ -389,7 +389,7 @@ export default function ProfileScreen() {
                 <Text style={styles.bankSubLabel}>ACCOUNT HOLDER</Text>
                 <Text style={styles.bankSubValue}>{dbData.fullName.toUpperCase()}</Text>
               </View>
-              <View style={{alignItems: 'flex-end'}}>
+              <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.bankSubLabel}>IFSC CODE</Text>
                 <Text style={styles.bankSubValue}>{dbData.ifscCode.toUpperCase()}</Text>
               </View>
@@ -398,14 +398,14 @@ export default function ProfileScreen() {
           <View style={styles.bankDetailsBox}>
             <Text style={styles.bankBoxTitle}>Account Details</Text>
             <View style={styles.bankRow}>
-              <View style={[styles.bankIconBox, {backgroundColor: '#EFF6FF'}]}><Feather name="hash" size={16} color="#0284C7" /></View>
+              <View style={[styles.bankIconBox, { backgroundColor: '#EFF6FF' }]}><Feather name="hash" size={16} color="#0284C7" /></View>
               <View>
                 <Text style={styles.bankRowLabel}>Account Number</Text>
                 <Text style={styles.bankRowValue}>{dbData.bankAccount}</Text>
               </View>
             </View>
             <View style={styles.bankRow}>
-              <View style={[styles.bankIconBox, {backgroundColor: '#FAF5FF'}]}><Feather name="code" size={16} color="#9333EA" /></View>
+              <View style={[styles.bankIconBox, { backgroundColor: '#FAF5FF' }]}><Feather name="code" size={16} color="#9333EA" /></View>
               <View>
                 <Text style={styles.bankRowLabel}>IFSC Code</Text>
                 <Text style={styles.bankRowValue}>{dbData.ifscCode}</Text>
@@ -427,7 +427,7 @@ export default function ProfileScreen() {
           <View style={styles.vehCardHero}>
             <View style={styles.rowCenter}>
               <View style={styles.vehHeroIcon}><NativeIcon name="truck" size={24} color="#FFF" /></View>
-              <View style={{marginLeft: 12}}>
+              <View style={{ marginLeft: 12 }}>
                 <Text style={styles.vehHeroLabel}>Vehicle Type</Text>
                 <Text style={styles.vehHeroValue}>{dbData.modelName || dbData.vehicleType}</Text>
               </View>
@@ -529,10 +529,10 @@ export default function ProfileScreen() {
     // ── EMERGENCY ─────────────────────────────────────────────────────
     else if (activeModal === 'emergency') {
       content = (
-        <View style={{alignItems: 'center'}}>
-          <View style={[styles.modalHeader, {justifyContent: 'center'}]}>
+        <View style={{ alignItems: 'center' }}>
+          <View style={[styles.modalHeader, { justifyContent: 'center' }]}>
             <Feather name="alert-circle" size={24} color="#DC2626" />
-            <Text style={[styles.modalTitle, {color: '#DC2626', marginLeft: 8}]}>Emergency SOS</Text>
+            <Text style={[styles.modalTitle, { color: '#DC2626', marginLeft: 8 }]}>Emergency SOS</Text>
           </View>
           <View style={styles.sosCard}>
             <Text style={styles.sosSub}>Pressing this will alert your emergency contacts instantly.</Text>
@@ -555,7 +555,7 @@ export default function ProfileScreen() {
           <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setActiveModal(null)} />
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 20}}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
               {content}
             </ScrollView>
             <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeBtnPrimary}>
@@ -569,9 +569,9 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, {justifyContent:'center', alignItems:'center'}]}>
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#0284C7" />
-        <Text style={{color:'#64748B', marginTop:12, fontWeight:'600'}}>Loading profile...</Text>
+        <Text style={{ color: '#64748B', marginTop: 12, fontWeight: '600' }}>Loading profile...</Text>
       </SafeAreaView>
     );
   }
@@ -584,7 +584,7 @@ export default function ProfileScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.avatarBox}>
             {dbData.avatarUrl ? (
-              <Image source={{uri: dbData.avatarUrl}} style={{width:80,height:80,borderRadius:40}} />
+              <Image source={{ uri: dbData.avatarUrl }} style={{ width: 80, height: 80, borderRadius: 40 }} />
             ) : (
               <Feather name="user" size={40} color="#94A3B8" />
             )}
@@ -592,7 +592,7 @@ export default function ProfileScreen() {
           <View style={styles.profileInfo}>
             <View style={styles.rowCenter}>
               <Text style={styles.profileName}>{dbData.fullName}</Text>
-              {isPilot && <View style={{marginLeft: 8}}><NativeIcon name="crown" size={20} color="#F59E0B" /></View>}
+              {isPilot && <View style={{ marginLeft: 8 }}><NativeIcon name="crown" size={20} color="#F59E0B" /></View>}
             </View>
             <View style={styles.ratingRow}>
               <Feather name="star" size={14} color="#F59E0B" />
@@ -604,21 +604,21 @@ export default function ProfileScreen() {
 
         {/* Top Stats Grid */}
         <View style={styles.topStatsGrid}>
-          <View style={[styles.statHero, {backgroundColor: '#EFF6FF', borderColor: '#BFDBFE'}]}>
+          <View style={[styles.statHero, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
             <View style={styles.rowCenter}>
               <Feather name="bar-chart-2" size={16} color="#2563EB" />
-              <Text style={[styles.statHeroLabel, {color: '#2563EB'}]}>Total Stats</Text>
+              <Text style={[styles.statHeroLabel, { color: '#2563EB' }]}>Total Stats</Text>
             </View>
-            <Text style={[styles.statHeroValue, {color: '#1D4ED8'}]}>{dbData.todayOrders}</Text>
-            <Text style={[styles.statHeroSub, {color: '#2563EB'}]}>Trips</Text>
+            <Text style={[styles.statHeroValue, { color: '#1D4ED8' }]}>{dbData.todayOrders}</Text>
+            <Text style={[styles.statHeroSub, { color: '#2563EB' }]}>Trips</Text>
           </View>
-          <View style={[styles.statHero, {backgroundColor: '#F0FDF4', borderColor: '#BBF7D0'}]}>
+          <View style={[styles.statHero, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
             <View style={styles.rowCenter}>
               <Feather name="dollar-sign" size={16} color="#16A34A" />
-              <Text style={[styles.statHeroLabel, {color: '#16A34A'}]}>Total Earnings</Text>
+              <Text style={[styles.statHeroLabel, { color: '#16A34A' }]}>Total Earnings</Text>
             </View>
-            <Text style={[styles.statHeroValue, {color: '#15803D'}]}>₹{dbData.todayEarnings}</Text>
-            <Text style={[styles.statHeroSub, {color: '#16A34A'}]}>Total</Text>
+            <Text style={[styles.statHeroValue, { color: '#15803D' }]}>₹{dbData.todayEarnings}</Text>
+            <Text style={[styles.statHeroSub, { color: '#16A34A' }]}>Total</Text>
           </View>
         </View>
 
@@ -629,25 +629,25 @@ export default function ProfileScreen() {
         >
           <View style={styles.rowBetween}>
             <View style={styles.rowCenter}>
-              <View style={[styles.pilotIcon, isPilot ? {backgroundColor: '#F59E0B'} : {backgroundColor: '#E2E8F0'}]}>
+              <View style={[styles.pilotIcon, isPilot ? { backgroundColor: '#F59E0B' } : { backgroundColor: '#E2E8F0' }]}>
                 <NativeIcon name="crown" size={24} color={isPilot ? "#FFF" : "#64748B"} />
               </View>
-              <View style={{marginLeft: 12}}>
-                <Text style={[styles.pilotTitle, isPilot ? {color: '#B45309'} : {color: '#334155'}]}>{isPilot ? 'Pilot Partner' : 'Standard Partner'}</Text>
+              <View style={{ marginLeft: 12 }}>
+                <Text style={[styles.pilotTitle, isPilot ? { color: '#B45309' } : { color: '#334155' }]}>{isPilot ? 'Pilot Partner' : 'Standard Partner'}</Text>
                 <Text style={styles.pilotSub}>{currentWeeklyOrders} orders this week</Text>
               </View>
             </View>
             {isPilot ? (
               <View style={styles.pilotBadge}><Text style={styles.pilotBadgeText}>PILOT</Text></View>
             ) : (
-              <View style={{alignItems: 'flex-end'}}>
+              <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.pilotProgressLabel}>Progress</Text>
                 <Text style={styles.pilotProgressValue}>{Math.round(progressPercent)}%</Text>
               </View>
             )}
           </View>
           <View style={styles.pilotTrack}>
-            <View style={[styles.pilotFill, isPilot ? {backgroundColor: '#F59E0B', width: '100%'} : {backgroundColor: '#0284C7', width: `${progressPercent}%`}]} />
+            <View style={[styles.pilotFill, isPilot ? { backgroundColor: '#F59E0B', width: '100%' } : { backgroundColor: '#0284C7', width: `${progressPercent}%` }]} />
           </View>
           {isPilot ? (
             <View style={styles.rowCenter}>
@@ -664,7 +664,7 @@ export default function ProfileScreen() {
           <View style={styles.rowBetween}>
             <View style={styles.rowCenter}>
               <Feather name="award" size={20} color="#9333EA" />
-              <View style={{marginLeft: 12}}>
+              <View style={{ marginLeft: 12 }}>
                 <Text style={styles.rankBtnTitle}>Aviation Rank</Text>
                 <Text style={styles.rankBtnSub}>{currentRank.name} • View progression</Text>
               </View>
@@ -677,7 +677,7 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => setIsVoiceOn(!isVoiceOn)} style={[styles.voiceBtn, isVoiceOn ? styles.voiceBtnOn : styles.voiceBtnOff]}>
           <View style={styles.rowCenter}>
             <Feather name={isVoiceOn ? 'volume-2' : 'volume-x'} size={18} color={isVoiceOn ? '#0284C7' : '#64748B'} />
-            <Text style={[styles.voiceBtnText, isVoiceOn ? {color: '#0284C7'} : {color: '#64748B'}]}>Voice Narration</Text>
+            <Text style={[styles.voiceBtnText, isVoiceOn ? { color: '#0284C7' } : { color: '#64748B' }]}>Voice Narration</Text>
           </View>
           <View style={[styles.switchBtn, isVoiceOn ? styles.switchOn : styles.switchOff]}>
             <View style={[styles.switchKnob, isVoiceOn ? styles.knobOn : styles.knobOff]} />
@@ -688,7 +688,7 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => setIsWalletOpen(true)} style={styles.walletBtn}>
           <View style={styles.rowCenter}>
             <View style={styles.walletIcon}><Feather name="credit-card" size={20} color="#FFF" /></View>
-            <View style={{marginLeft: 16}}>
+            <View style={{ marginLeft: 16 }}>
               <Text style={styles.walletLabel}>WALLET BALANCE</Text>
               <Text style={styles.walletValue}>₹{dbData.walletBalance}</Text>
             </View>
@@ -719,14 +719,14 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={() => setActiveModal('bank')} style={styles.actionItem}>
             <NativeIcon name="card" size={18} color="#64748B" /><Text style={styles.actionText}>Bank Details</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setActiveModal('support')} style={[styles.actionItem, {borderColor: '#BBF7D0'}]}>
-            <Feather name="help-circle" size={18} color="#16A34A" /><Text style={[styles.actionText, {color: '#16A34A'}]}>Help / Support</Text>
+          <TouchableOpacity onPress={() => setActiveModal('support')} style={[styles.actionItem, { borderColor: '#BBF7D0' }]}>
+            <Feather name="help-circle" size={18} color="#16A34A" /><Text style={[styles.actionText, { color: '#16A34A' }]}>Help / Support</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setActiveModal('emergency')} style={[styles.actionItem, {borderColor: '#FECACA', backgroundColor: '#FEF2F2'}]}>
-            <Feather name="alert-circle" size={18} color="#DC2626" /><Text style={[styles.actionText, {color: '#DC2626'}]}>Emergency SOS</Text>
+          <TouchableOpacity onPress={() => setActiveModal('emergency')} style={[styles.actionItem, { borderColor: '#FECACA', backgroundColor: '#FEF2F2' }]}>
+            <Feather name="alert-circle" size={18} color="#DC2626" /><Text style={[styles.actionText, { color: '#DC2626' }]}>Emergency SOS</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSignOut} style={[styles.actionItem, {marginTop: 32, borderWidth: 0}]}>
-            <Feather name="log-out" size={18} color="#EF4444" /><Text style={[styles.actionText, {color: '#EF4444'}]}>Sign Out</Text>
+          <TouchableOpacity onPress={handleSignOut} style={[styles.actionItem, { marginTop: 32, borderWidth: 0 }]}>
+            <Feather name="log-out" size={18} color="#EF4444" /><Text style={[styles.actionText, { color: '#EF4444' }]}>Sign Out</Text>
           </TouchableOpacity>
         </View>
 
@@ -786,8 +786,8 @@ const styles = StyleSheet.create({
   switchOn: { backgroundColor: '#0284C7' },
   switchOff: { backgroundColor: '#CBD5E1' },
   switchKnob: { width: 16, height: 16, borderRadius: 8, backgroundColor: '#FFF' },
-  knobOn: { transform: [{translateX: 22}] },
-  knobOff: { transform: [{translateX: 2}] },
+  knobOn: { transform: [{ translateX: 22 }] },
+  knobOff: { transform: [{ translateX: 2 }] },
   walletBtn: { backgroundColor: '#0F172A', padding: 16, borderRadius: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, elevation: 4 },
   walletIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
   walletLabel: { fontSize: 10, color: '#94A3B8', fontWeight: 'bold' },

@@ -1,60 +1,65 @@
 // src/services/uploadService.js
-const { supabaseAdmin } = require('../config/supabase');
+// ──────────────────────────────────────────────────────────────
+// File Upload Service — Cloudinary (same as vendor app)
+// File Upload Service
+// ──────────────────────────────────────────────────────────────
 const { v4: uuidv4 } = require('uuid');
 
-// ──────────────────────────────────────────────────────────────
-// Upload a file buffer to Supabase Storage
-// Returns the public URL (for public buckets) or signed URL
-// ──────────────────────────────────────────────────────────────
-async function uploadFile({ bucket, folder, filename, buffer, mimetype }) {
-  const ext = filename.split('.').pop() || 'jpg';
-  const uniqueName = `${folder}/${uuidv4()}.${ext}`;
+// Cloudinary upload via REST API (no SDK needed, just fetch)
+async function uploadToCloudinary({ folder, filename, buffer, mimetype }) {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-  const { data, error } = await supabaseAdmin.storage
-    .from(bucket)
-    .upload(uniqueName, buffer, {
-      contentType: mimetype,
-      upsert: false,
-    });
-
-  if (error) {
-    console.error('[Upload Error]', error);
-    throw new Error(`Upload failed: ${error.message}`);
+  if (!cloudName || !apiKey || !apiSecret) {
+    // Dev mode: return a placeholder URL if Cloudinary not configured
+    console.warn('[Upload] Cloudinary not configured — returning placeholder URL');
+    return {
+      path: `${folder}/${uuidv4()}`,
+      publicUrl: `https://res.cloudinary.com/placeholder/${folder}/image.jpg`,
+      bucket: folder,
+    };
   }
 
-  // Get public URL (for public buckets like avatars, promo)
-  const { data: urlData } = supabaseAdmin.storage
-    .from(bucket)
-    .getPublicUrl(uniqueName);
+  const timestamp = Math.floor(Date.now() / 1000);
+  const publicId = `${folder}/${uuidv4()}`;
+
+  // Build signature
+  const crypto = require('crypto');
+  const sigString = `folder=${folder}&public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
+  const signature = crypto.createHash('sha1').update(sigString).digest('hex');
+
+  // Build form data
+  const FormData = require('form-data');
+  const form = new FormData();
+  form.append('file', buffer, { filename: filename || 'upload.jpg', contentType: mimetype });
+  form.append('api_key', apiKey);
+  form.append('timestamp', String(timestamp));
+  form.append('public_id', publicId);
+  form.append('folder', folder);
+  form.append('signature', signature);
+
+  const axios = require('axios');
+  const response = await axios.post(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    form,
+    { headers: form.getHeaders() }
+  );
 
   return {
-    path: data.path,
-    publicUrl: urlData.publicUrl,
-    bucket,
-    filename: uniqueName,
+    path: response.data.public_id,
+    publicUrl: response.data.secure_url,
+    bucket: folder,
+    filename: response.data.public_id,
   };
 }
 
 // ──────────────────────────────────────────────────────────────
-// Get a signed URL for private buckets (documents, package photos)
-// Valid for 1 hour by default
+// Main upload function
 // ──────────────────────────────────────────────────────────────
-async function getSignedUrl(bucket, path, expiresInSeconds = 3600) {
-  const { data, error } = await supabaseAdmin.storage
-    .from(bucket)
-    .createSignedUrl(path, expiresInSeconds);
-
-  if (error) throw new Error(`Failed to get signed URL: ${error.message}`);
-
-  return data.signedUrl;
+async function uploadFile({ bucket, folder, filename, buffer, mimetype }) {
+  const uploadFolder = `dechta/${bucket}/${folder}`;
+  return uploadToCloudinary({ folder: uploadFolder, filename, buffer, mimetype });
 }
 
-// ──────────────────────────────────────────────────────────────
-// Delete a file from storage
-// ──────────────────────────────────────────────────────────────
-async function deleteFile(bucket, path) {
-  const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
-  if (error) console.error('[Delete File Error]', error.message);
-}
-
-module.exports = { uploadFile, getSignedUrl, deleteFile };
+module.exports = { uploadFile };
